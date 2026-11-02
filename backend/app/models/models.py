@@ -1,7 +1,8 @@
+import json
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text, UniqueConstraint, Index
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, String, Text, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -24,9 +25,7 @@ class User(Base):
     job_applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
     files = relationship("FileCatalog", back_populates="user", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        Index("ix_users_email", "email"),
-    )
+    __table_args__ = ()
 
 
 class UserConnection(Base):
@@ -121,7 +120,36 @@ class FileCatalog(Base):
 
     user = relationship("User", back_populates="files")
 
+    @property
+    def tags(self):
+        if self._tags is None:
+            return None
+        return json.loads(self._tags)
+
+    @tags.setter
+    def tags(self, value):
+        if value is None:
+            self._tags = None
+        else:
+            self._tags = json.dumps(value)
+
+    @property
+    def tags_list(self):
+        return self.tags
+
+    @property
+    def tags(self):
+        if self._tags is None:
+            return None
+        return json.loads(self._tags)
+
+    @tags.setter
+    def tags(self, value):
+        if value is None:
+            self._tags = None
+        else:
+            self._tags = json.dumps(value)
+
     __table_args__ = (
         Index("ix_file_catalog_user_id", "user_id"),
-        Index("ix_file_catalog_tags", "tags", postgresql_using="gin", postgresql_with={"fast_update": True}),
     )

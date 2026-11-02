@@ -1,11 +1,12 @@
 from uuid import UUID
 
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.models import UserConnection, Draft, JobApplication, FileCatalog
+from app.models.models import User, UserConnection, Draft, JobApplication, FileCatalog
 from app.schemas.schemas import (
     ConnectionCreate, ConnectionOut,
     DraftCreate, DraftOut, DraftUpdate,
@@ -153,7 +154,10 @@ def list_files(current_user: User = Depends(get_current_user), db: Session = Dep
 
 @router.post("/files", response_model=FileCatalogOut, status_code=201)
 def create_file(body: FileCatalogCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    catalog = FileCatalog(user_id=current_user.id, **body.model_dump())
+    payload = body.model_dump()
+    tags = payload.pop("tags", None)
+    catalog = FileCatalog(user_id=current_user.id, **payload)
+    catalog.tags = tags
     db.add(catalog)
     db.commit()
     db.refresh(catalog)
