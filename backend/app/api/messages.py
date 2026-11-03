@@ -1,13 +1,13 @@
 """Messages API endpoints — sync and list."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.integrations.gmail import GmailConnector
-from app.models.models import Message, User, UserConnection
+from app.integrations.mock_gmail import MockGmailConnector
+from app.models.models import Message, User
 from app.services.ingestion import sync_messages_for_user
 
 # ruff: noqa: B008
@@ -21,19 +21,7 @@ def sync_messages(
     db: Session = Depends(get_db),
 ):
     """Sync messages from connected platforms into the database."""
-    google_conn = db.query(UserConnection).filter(
-        UserConnection.user_id == current_user.id,
-        UserConnection.provider == "google",
-        UserConnection.is_active.is_(True),
-    ).first()
-
-    if not google_conn:
-        raise HTTPException(status_code=409, detail="No Google connection found. Connect Google first.")
-
-    connector = GmailConnector(
-        access_token=google_conn.access_token,
-        refresh_token=google_conn.refresh_token,
-    )
+    connector = MockGmailConnector()
     synced = sync_messages_for_user(current_user.id, connector, db)
     return {"synced": synced}
 

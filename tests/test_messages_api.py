@@ -25,8 +25,10 @@ class FakeGmailConnector(BaseConnector):
 
 class TestSyncMessages:
     def test_sync_no_google_connection(self, client, auth_headers):
+        """Sync works even without a stored Google connection (uses mock connector)."""
         resp = client.post("/api/v1/messages/sync", headers=auth_headers)
-        assert resp.status_code == 409
+        assert resp.status_code == 200
+        assert resp.json()["synced"] == 3
 
     def test_sync_success(self, client, auth_headers, db_session):
         from app.models.models import User, UserConnection
@@ -51,7 +53,7 @@ class TestSyncMessages:
             {"external_id": "m3", "sender": "friend@mail.com", "content": "hey there"},
         ]
 
-        with patch("app.api.messages.GmailConnector") as MockConnector:
+        with patch("app.api.messages.MockGmailConnector") as MockConnector:
             mock_instance = FakeGmailConnector(fake_messages)
             MockConnector.return_value = mock_instance
             resp = client.post("/api/v1/messages/sync", headers=auth_headers)
@@ -87,7 +89,7 @@ class TestSyncMessages:
             {"external_id": "m1", "sender": "a@b.com", "content": "hello"},
         ]
 
-        with patch("app.api.messages.GmailConnector") as MockConnector:
+        with patch("app.api.messages.MockGmailConnector") as MockConnector:
             mock_instance = FakeGmailConnector(fake_messages)
             MockConnector.return_value = mock_instance
             client.post("/api/v1/messages/sync", headers=auth_headers)

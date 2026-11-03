@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from uuid import UUID
 
@@ -9,7 +8,6 @@ from app.models.models import User
 from app.schemas.schemas import LoginRequest, RegisterRequest, TokenResponse, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 @router.post("/register", response_model=UserOut)
