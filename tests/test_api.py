@@ -1,64 +1,7 @@
-from datetime import datetime
-from uuid import UUID, uuid4
+from datetime import UTC
+from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from app.core.database import Base
-from app.main import app
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture(autouse=True)
-def _setup_db():
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def db_session():
-    session = TestingSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-
-
-@pytest.fixture
-def client(db_session):
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
-
-    app.dependency_overrides[db_session.__self__.get_db if hasattr(db_session, '__self__') else 'get_db'] = override_get_db
-    from app.core.database import get_db
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def auth_headers(client: TestClient, db_session):
-    from app.core.security import hash_password
-    from app.models.models import User
-    user = User(email="test@example.com", hashed_password=hash_password("testpass123"), full_name="Test User")
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    resp = client.post("/api/v1/auth/login", json={"email": "test@example.com", "password": "testpass123"})
-    assert resp.status_code == 200, resp.text
-    token = resp.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
 
 # ── Auth tests ───────────────────────────────────────────────
 
@@ -377,6 +320,7 @@ class TestGoogleOAuth:
 
     def test_google_callback_user_not_found(self, client: TestClient, monkeypatch, db_session):
         from uuid import uuid4
+
         import app.api.connections as conn_module
         monkeypatch.setattr(conn_module.settings, "GOOGLE_CLIENT_ID", "fake-id")
         monkeypatch.setattr(conn_module.settings, "GOOGLE_CLIENT_SECRET", "fake-secret")
@@ -393,8 +337,8 @@ class TestGoogleOAuth:
         assert resp.status_code == 404
 
     def test_google_callback_success(self, client: TestClient, monkeypatch, db_session, auth_headers):
-        from app.models.models import User, UserConnection
         import app.api.connections as conn_module
+        from app.models.models import User, UserConnection
 
         user = db_session.query(User).filter(User.email == "test@example.com").first()
         assert user is not None
@@ -408,8 +352,8 @@ class TestGoogleOAuth:
         )
 
         def fake_exchange(*args, **kwargs):
-            from datetime import datetime, timezone
-            return ("fake-access-token", "fake-refresh-token", datetime.now(tz=timezone.utc))
+            from datetime import datetime
+            return ("fake-access-token", "fake-refresh-token", datetime.now(tz=UTC))
 
         original = conn_module.exchange_authorization_code
         conn_module.exchange_authorization_code = fake_exchange
