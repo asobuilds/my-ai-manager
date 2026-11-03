@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     OPENCODE_API_KEY: str = ""
     OPENCODE_API_URL: str = "http://localhost:8080"
 
+    # Agnes AI
+    AGNES_API_KEY: str = ""
+    AGNES_BASE_URL: str = "https://apihub.agnes-ai.com/v1"
+
+    # Agnes AI
+    AGNES_API_KEY: str = ""
+    AGNES_BASE_URL: str = "https://apihub.agnes-ai.com/v1"
+
+    # Agnes AI
+    AGNES_API_KEY: str = ""
+    AGNES_BASE_URL: str = "https://apihub.agnes-ai.com/v1"
+
 
 @lru_cache()
 def get_settings() -> Settings:

@@ -224,22 +224,47 @@ class TestConnections:
 
 
 # ── Chat tests ───────────────────────────────────────────────
+from unittest.mock import AsyncMock, patch
+
 
 class TestChat:
+    def _make_mock_resp(self):
+        class MockResp:
+            status_code = 200
+            def json(self):
+                return {"choices": [{"message": {"content": "Mock response"}}]}
+            def raise_for_status(self):
+                pass
+        return MockResp()
+
     def test_chat(self, client: TestClient, auth_headers):
-        resp = client.post("/api/v1/chat/", json={
-            "message": "What drafts do I have?",
-        }, headers=auth_headers)
+        mock_resp = self._make_mock_resp()
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch("app.api.chat.httpx.AsyncClient") as MockClient:
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+            resp = client.post("/api/v1/chat/", json={
+                "message": "What drafts do I have?",
+            }, headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "response" in data
         assert "conversation_id" in data
 
     def test_chat_with_context(self, client: TestClient, auth_headers):
-        resp = client.post("/api/v1/chat/", json={
-            "message": "Summarize my jobs",
-            "context_keys": ["gmail", "jobs"],
-        }, headers=auth_headers)
+        mock_resp = self._make_mock_resp()
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch("app.api.chat.httpx.AsyncClient") as MockClient:
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+            resp = client.post("/api/v1/chat/", json={
+                "message": "Summarize my jobs",
+                "context_keys": ["gmail", "jobs"],
+            }, headers=auth_headers)
         assert resp.status_code == 200
 
 
