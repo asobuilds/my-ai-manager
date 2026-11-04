@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 import httpx
+from streamlit_kanban import st_kanban
 
 # Must be first Streamlit call
 st.set_page_config(page_title="Aso Data Assistant", page_icon="🤖", layout="wide")
@@ -180,6 +181,18 @@ def login(email: str, password: str) -> tuple[bool, str]:
         return False, "Cannot connect to server. Is the backend running?"
     except Exception as e:
         return False, f"Login error: {e}"
+
+
+def register(email: str, password: str, full_name: str) -> tuple[bool, str]:
+    try:
+        resp = httpx.post(f"{BASE_URL}/auth/register", json={"email": email, "password": password, "full_name": full_name}, timeout=10.0)
+        if resp.status_code == 200:
+            return True, "Account created! Please sign in."
+        return False, resp.json().get("detail", f"Registration failed ({resp.status_code}).")
+    except httpx.ConnectError:
+        return False, "Cannot connect to server."
+    except Exception as e:
+        return False, f"Registration error: {e}"
 
 
 def send_message(message: str, conv_id: str | None = None) -> tuple[str, str | None]:
@@ -369,59 +382,103 @@ def render_job_tracker():
     st.markdown("### 💼 Job Tracker")
     st.caption("Track your job applications and their status.")
 
-    left, right = st.columns([3, 1])
+    jobs = fetch_jobs()
 
-    with left:
-        jobs = fetch_jobs()
-        if not jobs:
-            st.info("No job applications yet. Add one below!")
-        else:
-            status_order = ["saved", "applied", "interviewing", "rejected", "offered"]
-            grouped: dict[str, list[dict]] = {}
-            for s in status_order:
-                grouped[s] = [j for j in jobs if j.get("status", "").lower() == s]
-            for s in [s for s in status_order if grouped.get(s)]:
-                st.markdown(f"**{s.capitalize()}** ({len(grouped[s])})")
-                for j in grouped[s]:
-                    c1, c2, c3 = st.columns([3, 1, 1])
-                    with c1:
-                        st.markdown(f"**{j.get('company_name') or j.get('company', '?')}** — {j.get('job_title') or j.get('position', '?')}")
-                        if j.get("notes"):
-                            st.caption(j["notes"][:60])
-                    with c2:
-                        new_status = st.selectbox(
-                            "Status", status_order,
-                            index=status_order.index(j.get("status", "applied")) if j.get("status") in status_order else 0,
-                            key=f"status_{j['id']}", label_visibility="collapsed",
-                        )
-                    with c3:
-                        if st.button("✏️", key=f"save_{j['id']}"):
-                            ok, msg = update_job(j["id"], {"status": new_status})
-                            st.toast(msg, icon="✅" if ok else "❌")
+    status_order = ["saved", "applied", "interviewing", "rejected", "offered"]
+    status_colors = {
+        "saved": "#6366f1",
+        "applied": "#3b82f6",
+        "interviewing": "#f59e0b",
+        "rejected": "#ef4444",
+        "offered": "#10b981",
+    }
+
+    columns: list[dict] = []
+    for s in status_order:
+        cards = []
+        for j in jobs:
+            if j.get("status", "").lower() == s:
+                cards.append({
+                    "id": str(j["id"]),
+                    "title": f"{j.get('company_name') or j.get('company', '?')} — {j.get('job_title') or j.get('position', '?')}",
+                    "tag": s.capitalize(),
+                    "priority": "high" if j.get("priority_score", 0) > 5 else "low",
+                })
+        columns.append({
+            "id": s,
+            "title": s.capitalize(),
+            "color": status_colors[s],
+            "cards": cards,
+        })
+
+    st_kanban(columns, key="job_kanban")
+
+    st.divider()
+
+    st.markdown("**➕ Add New Application**")
+    with st.form("add_job_form"):
+        comp = st.text_input("Company Name", key="in_company")
+        title = st.text_input("Job Title", key="in_title")
+        status = st.selectbox("Status", ["applied", "saved", "interviewing", "rejected", "offered"], index=0, key="in_status")
+        notes = st.text_area("Notes", height=60, key="in_notes")
+        submitted = st.form_submit_button("Add", type="primary")
+        if submitted:
+            if not comp or not title:
+                st.error("Company and Job Title are required.")
+            else:
+                ok, msg = create_job({
+                    "company_name": comp,
+                    "job_title": title,
+                    "status": status,
+                    "notes": notes or None,
+                })
+                st.toast(msg, icon="✅" if ok else "❌")
+                if ok:
+                    st.rerun()
+
+
+def render_integrations():
+    st.markdown("### 🔌 Integrations")
+    st.caption("Connect your accounts to sync messages and data.")
+
+    if st.button("📧 Sync Emails (Gmail)", key="sync_btn"):
+        with st.spinner("Syncing..."):
+            ok, msg = sync_emails()
+        st.success(msg) if ok else st.error(msg)
+
+    st.divider()
+
+    layout = st.session_state["layout_style"]
+
+    if layout == "Grid":
+        cols = st.columns(3)
+        for i, plat in enumerate(PLATFORMS):
+            with cols[i % 3]:
+                connected = st.session_state.get(f"connected_{plat['name']}", False)
+                with st.container(border=True):
+                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
+                    if connected:
+                        st.success("✅ Connected", icon="✅")
+                    else:
+                        if st.button("Connect", key=f"conn_{plat['name']}", use_container_width=True):
+                            st.session_state[f"connected_{plat['name']}"] = True
+                            st.toast(f"Successfully connected to {plat['name']}!")
                             st.rerun()
-                    st.divider()
-
-    with right:
-        st.markdown("**➕ Add New Application**")
-        with st.form("add_job_form"):
-            comp = st.text_input("Company Name", key="in_company")
-            title = st.text_input("Job Title", key="in_title")
-            status = st.selectbox("Status", ["applied", "saved", "interviewing", "rejected", "offered"], index=0, key="in_status")
-            notes = st.text_area("Notes", height=60, key="in_notes")
-            submitted = st.form_submit_button("Add", type="primary")
-            if submitted:
-                if not comp or not title:
-                    st.error("Company and Job Title are required.")
-                else:
-                    ok, msg = create_job({
-                        "company_name": comp,
-                        "job_title": title,
-                        "status": status,
-                        "notes": notes or None,
-                    })
-                    st.toast(msg, icon="✅" if ok else "❌")
-                    if ok:
-                        st.rerun()
+    else:
+        for plat in PLATFORMS:
+            connected = st.session_state.get(f"connected_{plat['name']}", False)
+            with st.container(border=True):
+                cols = st.columns([3, 1])
+                with cols[0]:
+                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
+                with cols[1]:
+                    if connected:
+                        st.success("✅", icon="✅")
+                    else:
+                        if st.button("Connect", key=f"conn_l_{plat['name']}", use_container_width=True):
+                            st.session_state[f"connected_{plat['name']}"] = True
+                            st.toast(f"Successfully connected to {plat['name']}!")
+                            st.rerun()
 
 
 def render_settings():
@@ -502,21 +559,41 @@ PAGES = {"💬 Chat": render_chat, "📦 Data Inventory": render_data_inventory,
 # ── Login ────────────────────────────────────────────────────────────────────
 
 def render_login():
-    st.markdown("<h2 style='text-align:center'>🤖 Aso Data Assistant</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;color:#94a3b8'>Sign in to continue</p>", unsafe_allow_html=True)
+    tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
 
-    email = st.text_input("Email", key="l_email")
-    password = st.text_input("Password", type="password", key="l_pwd")
-    if st.button("Log In", type="primary", use_container_width=True, key="l_btn"):
-        if not email or not password:
-            st.error("Enter both email and password.")
-            return
-        ok, msg = login(email, password)
-        if ok:
-            st.success("Logged in!")
-            st.rerun()
-        else:
-            st.error(msg)
+    with tab1:
+        st.markdown("<h3>Welcome back</h3>", unsafe_allow_html=True)
+        email = st.text_input("Email", key="l_email")
+        password = st.text_input("Password", type="password", key="l_pwd")
+        if st.button("Log In", type="primary", use_container_width=True, key="l_btn"):
+            if not email or not password:
+                st.error("Enter both email and password.")
+                return
+            ok, msg = login(email, password)
+            if ok:
+                st.success("Logged in!")
+                st.rerun()
+            else:
+                st.error(msg)
+
+    with tab2:
+        st.markdown("<h3>Create an account</h3>", unsafe_allow_html=True)
+        full_name = st.text_input("Full Name", key="r_name")
+        email = st.text_input("Email", key="r_email")
+        password = st.text_input("Password", type="password", key="r_pwd")
+        confirm = st.text_input("Confirm Password", type="password", key="r_confirm")
+        if st.button("Sign Up", type="primary", use_container_width=True, key="r_btn"):
+            if not email or not password:
+                st.error("Enter both email and password.")
+                return
+            if password != confirm:
+                st.error("Passwords do not match.")
+                return
+            ok, msg = register(email, password, full_name or None)
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
