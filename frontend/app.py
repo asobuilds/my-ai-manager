@@ -1,8 +1,11 @@
-"""My Junior Assistant — futuristic glassmorphism dashboard."""
+"""Aso Data Assistant — glassmorphism dashboard."""
 from __future__ import annotations
 
 import streamlit as st
 import httpx
+
+# Must be first Streamlit call
+st.set_page_config(page_title="Aso Data Assistant", page_icon="🤖", layout="wide")
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
@@ -14,194 +17,150 @@ PLATFORMS = [
     {"name": "Twitter / X", "emoji": "🐦", "connected": False},
 ]
 
+THEME_COLORS = ["blue", "cyan", "purple", "pink", "emerald", "amber"]
+THEME_HEX = {
+    "blue": "#3b82f6",
+    "cyan": "#06b6d4",
+    "purple": "#8b5cf6",
+    "pink": "#ec4899",
+    "emerald": "#10b981",
+    "amber": "#f59e0b",
+}
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+
+# ── CSS ──────────────────────────────────────────────────────────────────────
 
 def _css(dark: bool, theme: str) -> str:
+    hex_color = THEME_HEX.get(theme, "#3b82f6")
     if dark:
-        bg = "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)"
-        glass_bg = "rgba(255, 255, 255, 0.05)"
-        glass_border = "rgba(255, 255, 255, 0.12)"
-        text_primary = "#f1f5f9"
-        text_secondary = "#94a3b8"
-        accent = _theme_color(theme)
+        bg = f"linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%)"
+        txt = "#f1f5f9"
+        muted = "#94a3b8"
+        card_bg = "rgba(255,255,255,0.06)"
+        card_border = "rgba(255,255,255,0.10)"
     else:
-        bg = "linear-gradient(135deg, #e0e7ff 0%, #f0f9ff 50%, #faf5ff 100%)"
-        glass_bg = "rgba(255, 255, 255, 0.55)"
-        glass_border = "rgba(255, 255, 255, 0.7)"
-        text_primary = "#1e293b"
-        text_secondary = "#64748b"
-        accent = _theme_color(theme)
+        bg = f"linear-gradient(135deg, #eef2ff 0%, #f0f9ff 50%, #faf5ff 100%)"
+        txt = "#1e293b"
+        muted = "#64748b"
+        card_bg = "rgba(255,255,255,0.65)"
+        card_border = "rgba(255,255,255,0.80)"
 
     return f"""
     <style>
-    /* ── Base ───────────────────────────────────────────── */
+    /* ── Theme variable ─────────────────────────────────── */
+    :root {{
+        --aso-accent: {hex_color};
+    }}
+
+    /* ── App background ─────────────────────────────────── */
     .stApp {{
         background: {bg};
-        background-clip: padding-box;
-    }}
-    section.main > div {{
-        padding-top: 2rem;
-    }}
-    h1, h2, h3, h4, h5, h6 {{
-        color: {text_primary} !important;
-    }}
-    p, span, label, li, a, .stMarkdown {{
-        color: {text_secondary} !important;
-    }}
-    .stMarkdown strong, .stMarkdown b {{
-        color: {text_primary} !important;
     }}
 
-    /* ── Glass card ─────────────────────────────────────── */
-    .glass-card {{
-        background: {glass_bg};
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-radius: 24px;
-        border: 1px solid {glass_border};
-        padding: 1.5rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        margin-bottom: 1rem;
+    /* ── Global text colors ─────────────────────────────── */
+    h1, h2, h3, h4, h5, h6,
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+    label, .stMarkdown strong {{
+        color: {txt} !important;
     }}
-    .glass-card-sm {{
-        background: {glass_bg};
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-radius: 18px;
-        border: 1px solid {glass_border};
-        padding: 1rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    p, span, li, a, .stMarkdown,
+    .stTextInput label, .stSelectbox label, .stRadio label {{
+        color: {muted} !important;
     }}
 
-    /* ── Chat messages ──────────────────────────────────── */
-    .chat-user {{
-        background: {accent} !important;
+    /* ── Primary button override ────────────────────────── */
+    .stButton > button[kind="primary"],
+    .stButton > button[aria-label*="primary"] {{
+        background: var(--aso-accent) !important;
+        border-color: var(--aso-accent) !important;
         color: #fff !important;
-        border-radius: 18px 18px 4px 18px !important;
-        padding: 0.75rem 1rem !important;
-        max-width: 80%;
-        margin-left: auto;
-    }}
-    .chat-assistant {{
-        background: rgba(255,255,255,0.08) !important;
-        backdrop-filter: blur(12px);
-        color: {text_primary} !important;
-        border-radius: 18px 18px 18px 4px !important;
-        padding: 0.75rem 1rem !important;
-        max-width: 80%;
-    }}
-    [data-testid="stChatBubble"] {{
-        border-radius: 18px !important;
-    }}
-
-    /* ── Buttons ────────────────────────────────────────── */
-    .stButton > button {{
-        background: {accent} !important;
-        color: #fff !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 0.5rem 1.25rem !important;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }}
-    .stButton > button:hover {{
-        opacity: 0.85;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }}
-    .btn-connect {{
-        background: transparent !important;
-        border: 2px solid {accent} !important;
-        color: {accent} !important;
         font-weight: 600;
         border-radius: 10px !important;
-        padding: 0.4rem 1rem !important;
-        transition: all 0.2s ease;
+        transition: opacity 0.15s;
     }}
-    .btn-connect:hover {{
-        background: {accent} !important;
-        color: #fff !important;
+    .stButton > button[kind="primary"]:hover {{
+        opacity: 0.8;
     }}
 
-    /* ── Sidebar ────────────────────────────────────────── */
-    section[data-testid="stSidebar"] {{
-        background: rgba(0,0,0,0.2) !important;
-        backdrop-filter: blur(20px);
-        border-right: 1px solid {glass_border};
+    /* ── Secondary / default buttons ────────────────────── */
+    .stButton > button:not([kind="primary"]) {{
+        background: {card_bg} !important;
+        color: {txt} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 10px !important;
     }}
-    section[data-testid="stSidebar"] .stSidebarNav {{
-        padding-top: 1rem;
+
+    /* ── Input fields ───────────────────────────────────── */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div:first-child > div:first-child {{
+        background: rgba(255,255,255,0.08) !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 8px !important;
+        color: {txt} !important;
+    }}
+    .stTextInput > div > div > input::placeholder {{
+        color: {muted} !important;
+    }}
+
+    /* ── Chat bubbles ───────────────────────────────────── */
+    [data-testid="stChatBubble"] {{
+        border-radius: 14px !important;
+    }}
+    .stChatMessage[data-testid="stChatMessageUser"] [data-testid="stChatBubble"] {{
+        background: var(--aso-accent) !important;
+    }}
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    section[data-testid="stSidebar"] {{
+        background: rgba(0,0,0,0.15) !important;
+        border-right: 1px solid {card_border} !important;
     }}
     section[data-testid="stSidebar"] label {{
-        color: {text_primary} !important;
-    }}
-    section[data-testid="stSidebar"] [data-testid="stSidebarUserElement"] {{
-        color: {text_secondary} !important;
-    }}
-    .css-1lcbjkc {{
-        color: {text_secondary} !important;
-    }}
-    .css-1lcbjkc b, .css-1lcbjkc strong {{
-        color: {text_primary} !important;
+        color: {txt} !important;
     }}
 
-    /* ── Inputs & selects ──────────────────────────────── */
-    .stTextInput input, .stSelectbox div, .stRadio label {{
-        color: {text_primary} !important;
-    }}
-    .stTextInput input {{
-        background: rgba(255,255,255,0.08) !important;
-        border: 1px solid {glass_border} !important;
-        border-radius: 10px !important;
-        color: {text_primary} !important;
-    }}
-    div[data-testid="stVerticalBlock"] > div > div {{
-        background: rgba(255,255,255,0.04) !important;
-        border-radius: 16px !important;
-        padding: 1.25rem !important;
-        margin-bottom: 1rem;
-    }}
-
-    /* ── Toasts & alerts ────────────────────────────────── */
-    .stAlert {{
-        background: rgba(255,255,255,0.1) !important;
+    /* ── Main content vertical blocks (compact cards) ─── */
+    section.main > div > div:nth-child(2) > div > div {{
+        background: {card_bg} !important;
         backdrop-filter: blur(12px);
-        border: 1px solid {glass_border} !important;
-        border-radius: 12px !important;
-        color: {text_primary} !important;
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid {card_border} !important;
+        border-radius: 14px !important;
+        padding: 0.75rem 1rem !important;
+        margin-bottom: 0.5rem !important;
     }}
 
-    /* ── Divider ─────────────────────────────────────────── */
+    /* ── Toast / notification ──────────────────────────── */
+    .stAlert {{
+        background: {card_bg} !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid {card_border} !important;
+        border-radius: 10px !important;
+        color: {txt} !important;
+    }}
+
+    /* ── Divider ────────────────────────────────────────── */
     hr {{
-        border-color: {glass_border} !important;
+        border-color: {card_border} !important;
     }}
 
     /* ── Chat input ─────────────────────────────────────── */
     .stChatInputContainer textarea {{
-        background: rgba(255,255,255,0.08) !important;
-        border: 1px solid {glass_border} !important;
-        border-radius: 16px !important;
-        color: {text_primary} !important;
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 12px !important;
+        color: {txt} !important;
     }}
-    .stChatInputContainer textarea:focus {{
-        border-color: {accent} !important;
+
+    /* ── Spinner ─────────────────────────────────────────── */
+    .stSpinner > div {{
+        border-color: var(--aso-accent) !important;
     }}
     </style>
     """
 
 
-def _theme_color(theme: str) -> str:
-    colors = {
-        "blue": "#3b82f6",
-        "cyan": "#06b6d4",
-        "purple": "#8b5cf6",
-        "pink": "#ec4899",
-        "emerald": "#10b981",
-        "amber": "#f59e0b",
-    }
-    return colors.get(theme, "#3b82f6")
-
+# ── API helpers ──────────────────────────────────────────────────────────────
 
 def get_headers() -> dict[str, str]:
     token = st.session_state.get("access_token")
@@ -210,38 +169,25 @@ def get_headers() -> dict[str, str]:
 
 def login(email: str, password: str) -> tuple[bool, str]:
     try:
-        resp = httpx.post(
-            f"{BASE_URL}/auth/login",
-            json={"email": email, "password": password},
-            timeout=10.0,
-        )
+        resp = httpx.post(f"{BASE_URL}/auth/login", json={"email": email, "password": password}, timeout=10.0)
         if resp.status_code == 200:
-            data = resp.json()
-            st.session_state["access_token"] = data["access_token"]
+            st.session_state["access_token"] = resp.json()["access_token"]
             st.session_state["logged_in"] = True
             st.session_state["email"] = email
             return True, ""
-        elif resp.status_code == 401:
-            return False, "Invalid email or password."
-        else:
-            return False, f"Login failed (status {resp.status_code})."
+        return (False, "Invalid email or password.") if resp.status_code == 401 else (False, f"Login failed ({resp.status_code}).")
     except httpx.ConnectError:
         return False, "Cannot connect to server. Is the backend running?"
     except Exception as e:
         return False, f"Login error: {e}"
 
 
-def send_message(message: str, conversation_id: str | None = None) -> tuple[str, str | None]:
+def send_message(message: str, conv_id: str | None = None) -> tuple[str, str | None]:
     try:
         payload: dict = {"message": message}
-        if conversation_id:
-            payload["conversation_id"] = conversation_id
-        resp = httpx.post(
-            f"{BASE_URL}/chat/",
-            json=payload,
-            headers=get_headers(),
-            timeout=60.0,
-        )
+        if conv_id:
+            payload["conversation_id"] = conv_id
+        resp = httpx.post(f"{BASE_URL}/chat/", json=payload, headers=get_headers(), timeout=60.0)
         if resp.status_code == 401:
             st.session_state["logged_in"] = False
             st.error("Session expired. Please log in again.")
@@ -258,86 +204,48 @@ def send_message(message: str, conversation_id: str | None = None) -> tuple[str,
 
 def sync_emails() -> tuple[bool, str]:
     try:
-        resp = httpx.post(
-            f"{BASE_URL}/messages/sync",
-            headers=get_headers(),
-            timeout=30.0,
-        )
+        resp = httpx.post(f"{BASE_URL}/messages/sync", headers=get_headers(), timeout=30.0)
         if resp.status_code == 401:
             st.session_state["logged_in"] = False
-            return False, "Session expired. Please log in again."
+            return False, "Session expired."
         if resp.status_code != 200:
-            return False, f"Sync failed (status {resp.status_code})."
-        data = resp.json()
-        return True, f"Synced {data.get('synced', 0)} messages."
+            return False, f"Sync failed ({resp.status_code})."
+        return True, f"Synced {resp.json().get('synced', 0)} messages."
     except httpx.ConnectError:
-        return False, "Cannot connect to server. Is the backend running?"
+        return False, "Cannot connect to server."
     except Exception as e:
         return False, f"Sync error: {e}"
-
-
-def connect_platform(platform_name: str) -> str:
-    st.session_state[f"connected_{platform_name}"] = True
-    return f"Successfully connected to {platform_name}!"
 
 
 # ── Session init ─────────────────────────────────────────────────────────────
 
 def init_session():
     defaults = {
-        "logged_in": False,
-        "access_token": None,
-        "email": None,
-        "messages": [],
-        "conversation_id": None,
+        "logged_in": False, "access_token": None, "email": None,
+        "messages": [], "conversation_id": None,
         "nav_page": "💬 Chat",
-        "theme_color": "blue",
-        "dark_mode": True,
-        "layout_style": "Grid",
+        "theme_color": "blue", "dark_mode": True, "layout_style": "Grid",
     }
-    for key, val in defaults.items():
-        st.session_state.setdefault(key, val)
-    for plat in PLATFORMS:
-        st.session_state.setdefault(f"connected_{plat['name']}", False)
+    for k, v in defaults.items():
+        st.session_state.setdefault(k, v)
+    for p in PLATFORMS:
+        st.session_state.setdefault(f"connected_{p['name']}", False)
 
 
 # ── Pages ────────────────────────────────────────────────────────────────────
 
 def render_chat():
-    dark = st.session_state["dark_mode"]
-    theme = st.session_state["theme_color"]
-    accent = _theme_color(theme)
-    tx = "#f1f5f9" if dark else "#1e293b"
-    ts = "#94a3b8" if dark else "#64748b"
+    st.markdown("### 💬 Chat")
+    st.caption("Ask anything about your emails, jobs, or files.")
 
-    st.markdown(f'<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:{tx}'>💬 Chat</h2>", unsafe_allow_html=True)
-    st.markdown(
-        f"<p style='color:{ts};font-size:0.9rem'>Ask anything about your emails, jobs, or files.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Chat history
     for msg in st.session_state["messages"]:
-        if msg["role"] == "user":
-            st.markdown(
-                f'<div class="chat-user">{msg["content"]}</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                f'<div class="chat-assistant">{msg["content"]}</div>',
-                unsafe_allow_html=True,
-            )
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    # Chat input
-    prompt = st.chat_input("Type your message...")
-    if prompt:
+    if prompt := st.chat_input("Type your message..."):
         st.session_state["messages"].append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
-
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response, conv_id = send_message(prompt, st.session_state["conversation_id"])
@@ -345,38 +253,22 @@ def render_chat():
                     st.error(response)
                     return
                 st.markdown(response)
-
         st.session_state["messages"].append({"role": "assistant", "content": response})
         if conv_id:
             st.session_state["conversation_id"] = conv_id
 
 
 def render_integrations():
-    dark = st.session_state["dark_mode"]
-    theme = st.session_state["theme_color"]
-    accent = _theme_color(theme)
-    tx = "#f1f5f9" if dark else "#1e293b"
-    ts = "#94a3b8" if dark else "#64748b"
+    st.markdown("### 🔌 Integrations")
+    st.caption("Connect your accounts to sync messages and data.")
 
-    st.markdown(f'<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:{tx}'>🔌 Integrations</h2>", unsafe_allow_html=True)
-    st.markdown(
-        f"<p style='color:{ts};font-size:0.9rem'>Connect your accounts to sync messages and data.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Sync Emails
-    sync_ok, sync_msg = False, ""
-    if st.button("📧 Sync Emails (Gmail)", type="secondary"):
+    if st.button("📧 Sync Emails (Gmail)", key="sync_btn"):
         with st.spinner("Syncing..."):
-            sync_ok, sync_msg = sync_emails()
-        if sync_ok:
-            st.success(sync_msg)
-        else:
-            st.error(sync_msg)
+            ok, msg = sync_emails()
+        st.success(msg) if ok else st.error(msg)
 
-    st.markdown("")
+    st.divider()
+
     layout = st.session_state["layout_style"]
 
     if layout == "Grid":
@@ -384,234 +276,122 @@ def render_integrations():
         for i, plat in enumerate(PLATFORMS):
             with cols[i % 3]:
                 connected = st.session_state.get(f"connected_{plat['name']}", False)
-                st.markdown(
-                    f'<div class="glass-card-sm">',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f'<div style="font-size:2.5rem;text-align:center">{plat["emoji"]}</div>',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"<h4 style='text-align:center;color:{tx};margin:0.25rem 0'>{plat['name']}</h4>",
-                    unsafe_allow_html=True,
-                )
-                if connected:
-                    st.markdown(
-                        f'<div style="text-align:center;color:{accent};font-weight:600">✅ Connected</div>',
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    if st.button("Connect", key=f"btn_{plat['name']}", use_container_width=True, type="primary"):
-                        msg = connect_platform(plat["name"])
-                        st.toast(msg)
-                        st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
+                    if connected:
+                        st.success("✅ Connected", icon="✅")
+                    else:
+                        if st.button("Connect", key=f"conn_{plat['name']}", use_container_width=True):
+                            st.session_state[f"connected_{plat['name']}"] = True
+                            st.toast(f"Successfully connected to {plat['name']}!")
+                            st.rerun()
     else:
         for plat in PLATFORMS:
             connected = st.session_state.get(f"connected_{plat['name']}", False)
-            st.markdown(
-                f'<div class="glass-card-sm" style="display:flex;align-items:center;gap:1rem">',
-                unsafe_allow_html=True,
-            )
-            st.markdown(f'<span style="font-size:2rem">{plat["emoji"]}</span>', unsafe_allow_html=True)
-            st.markdown(f"<strong style='color:{tx}'>{plat['name']}</strong>", unsafe_allow_html=True)
-            if connected:
-                st.markdown(
-                    f'<span style="color:{accent};margin-left:auto">✅ Connected</span>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                if st.button("Connect", key=f"btn_list_{plat['name']}", type="primary"):
-                    msg = connect_platform(plat["name"])
-                    st.toast(msg)
-                    st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+            with st.container(border=True):
+                cols = st.columns([3, 1])
+                with cols[0]:
+                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
+                with cols[1]:
+                    if connected:
+                        st.success("✅", icon="✅")
+                    else:
+                        if st.button("Connect", key=f"conn_l_{plat['name']}", use_container_width=True):
+                            st.session_state[f"connected_{plat['name']}"] = True
+                            st.toast(f"Successfully connected to {plat['name']}!")
+                            st.rerun()
 
 
 def render_settings():
-    dark = st.session_state["dark_mode"]
-    theme = st.session_state["theme_color"]
-    accent = _theme_color(theme)
-    tx = "#f1f5f9" if dark else "#1e293b"
-    ts = "#94a3b8" if dark else "#64748b"
+    st.markdown("### ⚙️ Settings")
+    st.caption("Customize your dashboard. Changes apply instantly.")
 
-    st.markdown(f'<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:{tx}'>⚙️ Settings</h2>", unsafe_allow_html=True)
-    st.markdown(
-        f"<p style='color:{ts};font-size:0.9rem'>Customize your dashboard experience. Changes apply instantly.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**Theme Color**")
+        new_theme = st.selectbox("Color", THEME_COLORS, index=THEME_COLORS.index(st.session_state["theme_color"]), key="_theme_sel")
+        st.markdown("**Dark Mode**")
+        new_dark = st.toggle("Dark", value=st.session_state["dark_mode"], key="_dark_tog")
+    with c2:
+        st.markdown("**Layout**")
+        new_layout = st.radio("Style", ["Grid", "List"], index=["Grid", "List"].index(st.session_state["layout_style"]), key="_layout_rad")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f'<div class="glass-card-sm">', unsafe_allow_html=True)
-        st.markdown(f"<h4 style='color:{tx}'>🎨 Appearance</h4>", unsafe_allow_html=True)
-        new_theme = st.selectbox(
-            "Theme Color",
-            ["blue", "cyan", "purple", "pink", "emerald", "amber"],
-            index=["blue", "cyan", "purple", "pink", "emerald", "amber"].index(st.session_state["theme_color"]),
-            key="theme_color_select",
-        )
-        new_dark = st.toggle("Dark Mode", value=st.session_state["dark_mode"], key="dark_mode_toggle")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col2:
-        st.markdown(f'<div class="glass-card-sm">', unsafe_allow_html=True)
-        st.markdown(f"<h4 style='color:{tx}'>📐 Layout</h4>", unsafe_allow_html=True)
-        new_layout = st.radio(
-            "Layout Preference",
-            ["Grid", "List"],
-            index=["Grid", "List"].index(st.session_state["layout_style"]),
-            key="layout_style_radio",
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Apply changes
-    changed = False
-    if new_theme != st.session_state["theme_color"]:
+    # Live apply — rerun on any change
+    if (new_theme != st.session_state["theme_color"]
+            or new_dark != st.session_state["dark_mode"]
+            or new_layout != st.session_state["layout_style"]):
         st.session_state["theme_color"] = new_theme
-        changed = True
-    if new_dark != st.session_state["dark_mode"]:
         st.session_state["dark_mode"] = new_dark
-        changed = True
-    if new_layout != st.session_state["layout_style"]:
         st.session_state["layout_style"] = new_layout
-        changed = True
-
-    if changed:
         st.rerun()
-
-    st.markdown(f'<div class="glass-card-sm" style="margin-top:1rem">', unsafe_allow_html=True)
-    st.markdown(
-        f'<p style="color:{ts};font-size:0.85rem">💡 Tip: Toggle Dark Mode and pick a theme color to see the glassmorphism effect in action.</p>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_profile():
-    dark = st.session_state["dark_mode"]
-    theme = st.session_state["theme_color"]
-    accent = _theme_color(theme)
-    tx = "#f1f5f9" if dark else "#1e293b"
-    ts = "#94a3b8" if dark else "#64748b"
+    st.markdown("### 👤 Profile")
 
-    st.markdown(f'<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown(f"<h2 style='color:{tx}'>👤 Profile</h2>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f'<div class="glass-card-sm">', unsafe_allow_html=True)
-        st.markdown(f"<h4 style='color:{tx}'>Account Details</h4>", unsafe_allow_html=True)
-        st.markdown(f"**Email:** {st.session_state.get('email', 'N/A')}")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**Email:** " + st.session_state.get("email", "N/A"))
         st.markdown("**Account Tier:** Free Tier")
         st.markdown("**Status:** ✅ Active")
-        st.markdown("</div>", unsafe_allow_html=True)
+    with c2:
+        if st.button("Download Data", key="dl_btn"):
+            st.info("Coming soon!")
+        if st.button("Change Password", key="pw_btn"):
+            st.info("Coming soon!")
 
-    with col2:
-        st.markdown(f'<div class="glass-card-sm">', unsafe_allow_html=True)
-        st.markdown(f"<h4 style='color:{tx}'>Quick Actions</h4>", unsafe_allow_html=True)
-        if st.button("Download Data", use_container_width=True):
-            st.info("Data export coming soon!")
-        if st.button("Change Password", use_container_width=True):
-            st.info("Password change coming soon!")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    if st.button("Log Out", type="secondary", use_container_width=True):
+    st.divider()
+    if st.button("Log Out", key="logout_btn", use_container_width=True):
         st.session_state["logged_in"] = False
         st.session_state["access_token"] = None
         st.session_state["email"] = None
         st.session_state["messages"] = []
         st.session_state["conversation_id"] = None
-        for key in list(st.session_state.keys()):
-            if key.startswith("connected_"):
-                del st.session_state[key]
+        for k in list(st.session_state.keys()):
+            if k.startswith("connected_"):
+                del st.session_state[k]
         st.rerun()
 
 
-PAGE_RENDERERS = {
-    "💬 Chat": render_chat,
-    "🔌 Integrations": render_integrations,
-    "⚙️ Settings": render_settings,
-    "👤 Profile": render_profile,
-}
+PAGES = {"💬 Chat": render_chat, "🔌 Integrations": render_integrations,
+         "⚙️ Settings": render_settings, "👤 Profile": render_profile}
 
 
 # ── Login ────────────────────────────────────────────────────────────────────
 
 def render_login():
-    dark = True
-    tx = "#f1f5f9"
-    ts = "#94a3b8"
-    accent = "#3b82f6"
+    st.markdown("<h2 style='text-align:center'>🤖 Aso Data Assistant</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;color:#94a3b8'>Sign in to continue</p>", unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;">
-            <div class="glass-card" style="width:100%;max-width:380px;">
-                <h2 style="color:{tx};text-align:center;margin-bottom:0.25rem;">🤖 My Junior Assistant</h2>
-                <p style="color:{ts};text-align:center;font-size:0.9rem;margin-bottom:1.5rem;">Sign in to continue</p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="glass-card" style="max-width:400px;margin:0 auto;">', unsafe_allow_html=True)
-    email = st.text_input("Email", key="login_email")
-    password = st.text_input("Password", type="password", key="login_password")
-    if st.button("Log In", type="primary", use_container_width=True):
+    email = st.text_input("Email", key="l_email")
+    password = st.text_input("Password", type="password", key="l_pwd")
+    if st.button("Log In", type="primary", use_container_width=True, key="l_btn"):
         if not email or not password:
-            st.error("Please enter both email and password.")
+            st.error("Enter both email and password.")
             return
-        success, msg = login(email, password)
-        if success:
-            st.success("Logged in successfully!")
+        ok, msg = login(email, password)
+        if ok:
+            st.success("Logged in!")
             st.rerun()
         else:
             st.error(msg)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 
 def render_sidebar():
-    dark = st.session_state["dark_mode"]
-    tx = "#f1f5f9" if dark else "#1e293b"
-    ts = "#94a3b8" if dark else "#64748b"
-
-    st.sidebar.markdown(f'<div class="glass-card-sm">', unsafe_allow_html=True)
-    st.sidebar.markdown(
-        f"<h3 style='color:{tx};margin:0.25rem 0'>🤖 My Junior Assistant</h3>",
-        unsafe_allow_html=True,
-    )
-    st.sidebar.markdown(
-        f'<p style="color:{ts};font-size:0.8rem;margin:0">Your AI-powered productivity hub</p>',
-        unsafe_allow_html=True,
-    )
-    st.sidebar.markdown("</div>", unsafe_allow_html=True)
-
-    st.sidebar.markdown("")
-    pages = ["💬 Chat", "🔌 Integrations", "⚙️ Settings", "👤 Profile"]
-    page = st.sidebar.radio("Navigation", pages, key="nav_page")
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f'<div class="glass-card-sm">', unsafe_allow_html=True)
-    st.sidebar.markdown(f"👤 **{st.session_state['email']}</div>", unsafe_allow_html=True)
-    st.sidebar.markdown("</div>", unsafe_allow_html=True)
-
-    if st.sidebar.button("Log Out", use_container_width=True):
+    st.sidebar.markdown("### 🤖 Aso Data Assistant")
+    page = st.sidebar.radio("Navigation", list(PAGES.keys()), key="nav_page")
+    st.sidebar.markdown(f"**{st.session_state['email']}**")
+    if st.sidebar.button("Log Out", key="s_logout"):
         st.session_state["logged_in"] = False
         st.session_state["access_token"] = None
         st.session_state["email"] = None
         st.session_state["messages"] = []
         st.session_state["conversation_id"] = None
-        for key in list(st.session_state.keys()):
-            if key.startswith("connected_"):
-                del st.session_state[key]
+        for k in list(st.session_state.keys()):
+            if k.startswith("connected_"):
+                del st.session_state[k]
         st.rerun()
 
 
@@ -622,20 +402,13 @@ def main():
     dark = st.session_state["dark_mode"]
     theme = st.session_state["theme_color"]
 
-    st.set_page_config(
-        page_title="My Junior Assistant",
-        page_icon="🤖",
-        layout="wide",
-    )
-
-    # Inject glassmorphism CSS
     st.markdown(_css(dark, theme), unsafe_allow_html=True)
 
-    if not st.session_state.get("logged_in"):
-        render_login()
-    else:
+    if st.session_state.get("logged_in"):
         render_sidebar()
-        PAGE_RENDERERS[st.session_state["nav_page"]]()
+        PAGES[st.session_state["nav_page"]]()
+    else:
+        render_login()
 
 
 if __name__ == "__main__":
