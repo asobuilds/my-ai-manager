@@ -528,7 +528,7 @@ def render_data_inventory():
                             key=f"editor_{label}_{m['id']}",
                             label_visibility="collapsed",
                         )
-                        if st.button("Send Draft", key=f"send_{m['id']}", type="primary"):
+                        if st.button("Send Draft", key=f"send_{label}_{idx}_{m['id']}", type="primary"):
                             st.toast("Draft sent! (Wire up actual send in next phase)")
                             del st.session_state[f"draft_{m['id']}"]
 
