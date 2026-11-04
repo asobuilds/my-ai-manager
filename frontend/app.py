@@ -28,19 +28,29 @@ THEME_HEX = {
     "amber": "#f59e0b",
 }
 
+# Maps each accent color to a dark gradient (lighter tint, darker tint)
+THEME_GRADIENTS = {
+    "blue":    ("#0f1a2e", "#020617"),
+    "cyan":    ("#0a1e2a", "#020c14"),
+    "purple":  ("#1a0f2e", "#0a0217"),
+    "pink":    ("#2e0f1e", "#17020e"),
+    "emerald": ("#0f1e1a", "#021410"),
+    "amber":   ("#1e1a0f", "#141002"),
+}
+
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
 
 def _css(dark: bool, theme: str) -> str:
     hex_color = THEME_HEX.get(theme, "#3b82f6")
+    gradient = THEME_GRADIENTS.get(theme, ("#0f1a2e", "#020617"))
+    light_tint, dark_tint = gradient
     if dark:
-        bg = f"linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%)"
-        txt = "#f1f5f9"
+        txt = "#f8fafc"
         muted = "#94a3b8"
-        card_bg = "rgba(255,255,255,0.06)"
-        card_border = "rgba(255,255,255,0.10)"
+        card_bg = "rgba(255,255,255,0.05)"
+        card_border = "rgba(255,255,255,0.08)"
     else:
-        bg = f"linear-gradient(135deg, #eef2ff 0%, #f0f9ff 50%, #faf5ff 100%)"
         txt = "#1e293b"
         muted = "#64748b"
         card_bg = "rgba(255,255,255,0.65)"
@@ -48,15 +58,18 @@ def _css(dark: bool, theme: str) -> str:
 
     return f"""
     <style>
-    /* ── Theme variable ─────────────────────────────────── */
+    /* ── Theme variables ─────────────────────────────────── */
     :root {{
         --accent: {hex_color};
         --accent-muted: {hex_color};
     }}
 
-    /* ── App background ─────────────────────────────────── */
+    /* ── Main app background — tinted per theme ─────────── */
+    [data-testid="stAppViewContainer"] > div:first-child {{
+        background: linear-gradient(135deg, {light_tint} 0%, {dark_tint} 100%) !important;
+    }}
     .stApp {{
-        background: {bg};
+        background: linear-gradient(135deg, {light_tint} 0%, {dark_tint} 100%) !important;
     }}
 
     /* ── Global text colors ─────────────────────────────── */
@@ -114,7 +127,7 @@ def _css(dark: bool, theme: str) -> str:
 
     /* ── Sidebar ─────────────────────────────────────────── */
     section[data-testid="stSidebar"] {{
-        background: rgba(0,0,0,0.15) !important;
+        background: rgba(0,0,0,0.25) !important;
         border-right: 1px solid var(--accent-muted) !important;
     }}
     section[data-testid="stSidebar"] label {{
@@ -126,7 +139,7 @@ def _css(dark: bool, theme: str) -> str:
         font-weight: 600;
     }}
 
-    /* ── Main content vertical blocks (compact cards) ─── */
+    /* ── Main content vertical blocks (compact glass cards) ─── */
     section.main > div > div:nth-child(2) > div > div {{
         background: {card_bg} !important;
         backdrop-filter: blur(12px);
