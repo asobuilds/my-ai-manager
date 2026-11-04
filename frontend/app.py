@@ -402,6 +402,23 @@ def generate_draft(message_id: str) -> tuple[str, str]:
         return "", f"Error: {e}"
 
 
+def send_draft(message_id: str, draft_text: str) -> tuple[bool, str]:
+    try:
+        resp = httpx.post(f"{BASE_URL}/messages/send", json={"message_id": message_id, "draft_text": draft_text}, headers=get_headers(), timeout=15.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return False, "Session expired."
+        if resp.status_code == 404:
+            return False, "Message not found."
+        if resp.status_code == 200:
+            return True, "success"
+        return False, f"Failed ({resp.status_code})."
+    except httpx.ConnectError:
+        return False, "Cannot connect to server."
+    except Exception as e:
+        return False, f"Error: {e}"
+
+
 # ── Session init ─────────────────────────────────────────────────────────────
 
 def init_session():
@@ -529,8 +546,14 @@ def render_data_inventory():
                             label_visibility="collapsed",
                         )
                         if st.button("Send Draft", key=f"send_{label}_{idx}_{m['id']}", type="primary"):
-                            st.toast("Draft sent! (Wire up actual send in next phase)")
-                            del st.session_state[f"draft_{m['id']}"]
+                            draft_text = st.session_state.get(f"editor_{label}_{m['id']}", "")
+                            ok, msg = send_draft(m["id"], draft_text)
+                            if ok:
+                                st.success("Draft sent successfully!")
+                                del st.session_state[f"draft_{m['id']}"]
+                                st.rerun()
+                            else:
+                                st.error(msg)
 
 
 def render_job_tracker():

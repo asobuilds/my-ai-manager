@@ -26,6 +26,11 @@ class DraftRequest(BaseModel):
     message_id: str
 
 
+class SendDraftRequest(BaseModel):
+    message_id: str
+    draft_text: str
+
+
 @router.post("/draft")
 async def draft_reply(
     body: DraftRequest,
@@ -83,6 +88,24 @@ async def draft_reply(
     draft_text = choices[0].get("message", {}).get("content", "")
 
     return {"draft": draft_text}
+
+
+@router.post("/send")
+def send_draft(
+    body: SendDraftRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark a message as replied after sending the draft."""
+    msg = db.query(Message).filter(
+        Message.id == UUID(body.message_id),
+        Message.user_id == current_user.id,
+    ).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    msg.status = "replied"
+    db.commit()
+    return {"status": "success"}
 
 
 @router.post("/sync")
