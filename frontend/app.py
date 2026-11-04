@@ -217,6 +217,88 @@ def sync_emails() -> tuple[bool, str]:
         return False, f"Sync error: {e}"
 
 
+def fetch_messages() -> list[dict]:
+    try:
+        resp = httpx.get(f"{BASE_URL}/messages", headers=get_headers(), timeout=15.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+        return resp.json() if resp.status_code == 200 else []
+    except httpx.ConnectError:
+        return []
+    except Exception:
+        return []
+
+
+def fetch_jobs() -> list[dict]:
+    try:
+        resp = httpx.get(f"{BASE_URL}/jobs", headers=get_headers(), timeout=15.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+        return resp.json() if resp.status_code == 200 else []
+    except httpx.ConnectError:
+        return []
+    except Exception:
+        return []
+
+
+def create_job(data: dict) -> tuple[bool, str]:
+    try:
+        resp = httpx.post(f"{BASE_URL}/jobs", json=data, headers=get_headers(), timeout=15.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return False, "Session expired."
+        if resp.status_code == 201:
+            return True, "Job application added!"
+        return False, f"Failed ({resp.status_code})."
+    except httpx.ConnectError:
+        return False, "Cannot connect to server."
+    except Exception as e:
+        return False, f"Error: {e}"
+
+
+def update_job(job_id: str, data: dict) -> tuple[bool, str]:
+    try:
+        resp = httpx.patch(f"{BASE_URL}/jobs/{job_id}", json=data, headers=get_headers(), timeout=15.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return False, "Session expired."
+        if resp.status_code == 200:
+            return True, "Job updated!"
+        return False, f"Failed ({resp.status_code})."
+    except httpx.ConnectError:
+        return False, "Cannot connect to server."
+    except Exception as e:
+        return False, f"Error: {e}"
+
+
+def fetch_profile() -> dict | None:
+    try:
+        resp = httpx.get(f"{BASE_URL}/auth/me", headers=get_headers(), timeout=10.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return None
+        return resp.json() if resp.status_code == 200 else None
+    except httpx.ConnectError:
+        return None
+    except Exception:
+        return None
+
+
+def update_profile(data: dict) -> tuple[bool, str]:
+    try:
+        resp = httpx.put(f"{BASE_URL}/profile", json=data, headers=get_headers(), timeout=15.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return False, "Session expired."
+        if resp.status_code == 200:
+            return True, "Profile updated!"
+        return False, f"Failed ({resp.status_code})."
+    except httpx.ConnectError:
+        return False, "Cannot connect to server."
+    except Exception as e:
+        return False, f"Error: {e}"
+
+
 # ── Session init ─────────────────────────────────────────────────────────────
 
 def init_session():
@@ -258,48 +340,88 @@ def render_chat():
             st.session_state["conversation_id"] = conv_id
 
 
-def render_integrations():
-    st.markdown("### 🔌 Integrations")
-    st.caption("Connect your accounts to sync messages and data.")
+def render_data_inventory():
+    st.markdown("### 📦 Data Inventory")
+    st.caption("Your synced emails and messages.")
 
-    if st.button("📧 Sync Emails (Gmail)", key="sync_btn"):
-        with st.spinner("Syncing..."):
-            ok, msg = sync_emails()
-        st.success(msg) if ok else st.error(msg)
+    msgs = fetch_messages()
+    if not msgs:
+        st.info("No messages found. Connect Gmail and sync to get started.")
+        return
 
-    st.divider()
+    rows = []
+    for m in msgs:
+        rows.append({
+            "Source": m.get("platform", "").upper(),
+            "Sender": m.get("sender", "—"),
+            "Subject / Content": m.get("subject") or (m.get("content", "")[:80] if m.get("content") else "—"),
+            "Priority": m.get("priority_score", 0),
+            "Category": m.get("category") or "—",
+        })
 
-    layout = st.session_state["layout_style"]
+    if rows:
+        import pandas as pd
+        df = pd.DataFrame(rows)
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
-    if layout == "Grid":
-        cols = st.columns(3)
-        for i, plat in enumerate(PLATFORMS):
-            with cols[i % 3]:
-                connected = st.session_state.get(f"connected_{plat['name']}", False)
-                with st.container(border=True):
-                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
-                    if connected:
-                        st.success("✅ Connected", icon="✅")
-                    else:
-                        if st.button("Connect", key=f"conn_{plat['name']}", use_container_width=True):
-                            st.session_state[f"connected_{plat['name']}"] = True
-                            st.toast(f"Successfully connected to {plat['name']}!")
+
+def render_job_tracker():
+    st.markdown("### 💼 Job Tracker")
+    st.caption("Track your job applications and their status.")
+
+    left, right = st.columns([3, 1])
+
+    with left:
+        jobs = fetch_jobs()
+        if not jobs:
+            st.info("No job applications yet. Add one below!")
+        else:
+            status_order = ["saved", "applied", "interviewing", "rejected", "offered"]
+            grouped: dict[str, list[dict]] = {}
+            for s in status_order:
+                grouped[s] = [j for j in jobs if j.get("status", "").lower() == s]
+            for s in [s for s in status_order if grouped.get(s)]:
+                st.markdown(f"**{s.capitalize()}** ({len(grouped[s])})")
+                for j in grouped[s]:
+                    c1, c2, c3 = st.columns([3, 1, 1])
+                    with c1:
+                        st.markdown(f"**{j.get('company_name') or j.get('company', '?')}** — {j.get('job_title') or j.get('position', '?')}")
+                        if j.get("notes"):
+                            st.caption(j["notes"][:60])
+                    with c2:
+                        new_status = st.selectbox(
+                            "Status", status_order,
+                            index=status_order.index(j.get("status", "applied")) if j.get("status") in status_order else 0,
+                            key=f"status_{j['id']}", label_visibility="collapsed",
+                        )
+                    with c3:
+                        if st.button("✏️", key=f"save_{j['id']}"):
+                            ok, msg = update_job(j["id"], {"status": new_status})
+                            st.toast(msg, icon="✅" if ok else "❌")
                             st.rerun()
-    else:
-        for plat in PLATFORMS:
-            connected = st.session_state.get(f"connected_{plat['name']}", False)
-            with st.container(border=True):
-                cols = st.columns([3, 1])
-                with cols[0]:
-                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
-                with cols[1]:
-                    if connected:
-                        st.success("✅", icon="✅")
-                    else:
-                        if st.button("Connect", key=f"conn_l_{plat['name']}", use_container_width=True):
-                            st.session_state[f"connected_{plat['name']}"] = True
-                            st.toast(f"Successfully connected to {plat['name']}!")
-                            st.rerun()
+                    st.divider()
+
+    with right:
+        st.markdown("**➕ Add New Application**")
+        with st.form("add_job_form"):
+            comp = st.text_input("Company Name", key="in_company")
+            title = st.text_input("Job Title", key="in_title")
+            status = st.selectbox("Status", ["applied", "saved", "interviewing", "rejected", "offered"], index=0, key="in_status")
+            notes = st.text_area("Notes", height=60, key="in_notes")
+            submitted = st.form_submit_button("Add", type="primary")
+            if submitted:
+                if not comp or not title:
+                    st.error("Company and Job Title are required.")
+                else:
+                    ok, msg = create_job({
+                        "company_name": comp,
+                        "job_title": title,
+                        "status": status,
+                        "notes": notes or None,
+                    })
+                    st.toast(msg, icon="✅" if ok else "❌")
+                    if ok:
+                        st.rerun()
 
 
 def render_settings():
@@ -329,16 +451,35 @@ def render_settings():
 def render_profile():
     st.markdown("### 👤 Profile")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**Email:** " + st.session_state.get("email", "N/A"))
-        st.markdown("**Account Tier:** Free Tier")
-        st.markdown("**Status:** ✅ Active")
-    with c2:
-        if st.button("Download Data", key="dl_btn"):
-            st.info("Coming soon!")
-        if st.button("Change Password", key="pw_btn"):
-            st.info("Coming soon!")
+    profile = fetch_profile()
+    if not profile:
+        st.error("Could not load profile. Please log in again.")
+        return
+
+    current_phone = profile.get("phone") or ""
+    current_location = profile.get("location") or ""
+    current_bio = profile.get("bio") or ""
+
+    st.markdown(f"**Email:** {profile.get('email', 'N/A')}")
+    st.markdown(f"**Full Name:** {profile.get('full_name') or '—'}")
+
+    st.divider()
+    st.markdown("**Edit Profile**")
+
+    with st.form("profile_form"):
+        phone = st.text_input("Phone", value=current_phone, key="prof_phone")
+        location = st.text_input("Location", value=current_location, key="prof_location")
+        bio = st.text_area("Bio", value=current_bio, height=80, key="prof_bio")
+        submitted = st.form_submit_button("Save Profile", type="primary")
+        if submitted:
+            ok, msg = update_profile({
+                "phone": phone or None,
+                "location": location or None,
+                "bio": bio or None,
+            })
+            st.toast(msg, icon="✅" if ok else "❌")
+            if ok:
+                st.rerun()
 
     st.divider()
     if st.button("Log Out", key="logout_btn", use_container_width=True):
@@ -353,7 +494,8 @@ def render_profile():
         st.rerun()
 
 
-PAGES = {"💬 Chat": render_chat, "🔌 Integrations": render_integrations,
+PAGES = {"💬 Chat": render_chat, "📦 Data Inventory": render_data_inventory,
+         "💼 Job Tracker": render_job_tracker, "🔌 Integrations": render_integrations,
          "⚙️ Settings": render_settings, "👤 Profile": render_profile}
 
 
