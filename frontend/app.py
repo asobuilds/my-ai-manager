@@ -475,7 +475,7 @@ def render_data_inventory():
             if not pool:
                 st.caption("No messages here. Sync your inbox!")
                 continue
-            for m in pool:
+            for idx, m in enumerate(pool):
                 platform = m.get("platform", "").upper() or "—"
                 sender   = m.get("sender") or "Unknown"
                 score    = m.get("priority_score", 0)
@@ -496,7 +496,7 @@ def render_data_inventory():
                     body += "\n\n…(truncated)"
                 with st.expander(head, expanded=False):
                     st.markdown(body)
-                    if st.button("Draft Reply", key=f"reply_{m.get('id','')}"):
+                    if st.button("Draft Reply", key=f"reply_{label}_{idx}_{m.get('id','')}"):
                         st.info("Reply composer coming soon!")
 
 
