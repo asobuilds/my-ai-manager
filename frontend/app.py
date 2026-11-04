@@ -50,7 +50,8 @@ def _css(dark: bool, theme: str) -> str:
     <style>
     /* ── Theme variable ─────────────────────────────────── */
     :root {{
-        --aso-accent: {hex_color};
+        --accent: {hex_color};
+        --accent-muted: {hex_color};
     }}
 
     /* ── App background ─────────────────────────────────── */
@@ -72,8 +73,8 @@ def _css(dark: bool, theme: str) -> str:
     /* ── Primary button override ────────────────────────── */
     .stButton > button[kind="primary"],
     .stButton > button[aria-label*="primary"] {{
-        background: var(--aso-accent) !important;
-        border-color: var(--aso-accent) !important;
+        background: var(--accent) !important;
+        border-color: var(--accent) !important;
         color: #fff !important;
         font-weight: 600;
         border-radius: 10px !important;
@@ -87,7 +88,7 @@ def _css(dark: bool, theme: str) -> str:
     .stButton > button:not([kind="primary"]) {{
         background: {card_bg} !important;
         color: {txt} !important;
-        border: 1px solid {card_border} !important;
+        border: 1px solid var(--accent-muted) !important;
         border-radius: 10px !important;
     }}
 
@@ -95,7 +96,7 @@ def _css(dark: bool, theme: str) -> str:
     .stTextInput > div > div > input,
     .stSelectbox > div > div:first-child > div:first-child {{
         background: rgba(255,255,255,0.08) !important;
-        border: 1px solid {card_border} !important;
+        border: 1px solid var(--accent-muted) !important;
         border-radius: 8px !important;
         color: {txt} !important;
     }}
@@ -108,16 +109,21 @@ def _css(dark: bool, theme: str) -> str:
         border-radius: 14px !important;
     }}
     .stChatMessage[data-testid="stChatMessageUser"] [data-testid="stChatBubble"] {{
-        background: var(--aso-accent) !important;
+        background: var(--accent) !important;
     }}
 
     /* ── Sidebar ─────────────────────────────────────────── */
     section[data-testid="stSidebar"] {{
         background: rgba(0,0,0,0.15) !important;
-        border-right: 1px solid {card_border} !important;
+        border-right: 1px solid var(--accent-muted) !important;
     }}
     section[data-testid="stSidebar"] label {{
         color: {txt} !important;
+    }}
+    /* Sidebar selected radio */
+    section[data-testid="stSidebar"] .stRadio > label {{
+        color: var(--accent) !important;
+        font-weight: 600;
     }}
 
     /* ── Main content vertical blocks (compact cards) ─── */
@@ -125,7 +131,7 @@ def _css(dark: bool, theme: str) -> str:
         background: {card_bg} !important;
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid {card_border} !important;
+        border: 1px solid var(--accent-muted) !important;
         border-radius: 14px !important;
         padding: 0.75rem 1rem !important;
         margin-bottom: 0.5rem !important;
@@ -135,27 +141,27 @@ def _css(dark: bool, theme: str) -> str:
     .stAlert {{
         background: {card_bg} !important;
         backdrop-filter: blur(12px);
-        border: 1px solid {card_border} !important;
+        border: 1px solid var(--accent-muted) !important;
         border-radius: 10px !important;
         color: {txt} !important;
     }}
 
     /* ── Divider ────────────────────────────────────────── */
     hr {{
-        border-color: {card_border} !important;
+        border-color: var(--accent-muted) !important;
     }}
 
     /* ── Chat input ─────────────────────────────────────── */
     .stChatInputContainer textarea {{
         background: rgba(255,255,255,0.06) !important;
-        border: 1px solid {card_border} !important;
+        border: 1px solid var(--accent-muted) !important;
         border-radius: 12px !important;
         color: {txt} !important;
     }}
 
     /* ── Spinner ─────────────────────────────────────────── */
     .stSpinner > div {{
-        border-color: var(--aso-accent) !important;
+        border-color: var(--accent) !important;
     }}
     </style>
     """
