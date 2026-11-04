@@ -172,9 +172,63 @@ def _css(dark: bool, theme: str) -> str:
         color: {txt} !important;
     }}
 
-    /* ── Spinner ─────────────────────────────────────────── */
-    .stSpinner > div {{
-        border-color: var(--accent) !important;
+    /* ── KPI summary cards ──────────────────────────────── */
+    .aso-kpi {{
+        background: rgba(255,255,255,0.05) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 16px !important;
+        padding: 1.25rem 1.5rem !important;
+        text-align: center;
+    }}
+    .aso-kpi .kpi-value {{
+        font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        line-height: 1.1 !important;
+        margin: 0 !important;
+    }}
+    .aso-kpi .kpi-label {{
+        font-size: 0.85rem !important;
+        color: #94a3b8 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.25rem !important;
+    }}
+
+    /* ── Message expanders ──────────────────────────────── */
+    .aso-expander summary {{
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 1rem !important;
+        color: #f1f5f9 !important;
+        font-weight: 500;
+    }}
+    .aso-expander[open] summary {{
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+    }}
+    .aso-expander .expander-content {{
+        background: rgba(255,255,255,0.03) !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        border-top: none !important;
+        border-radius: 0 0 10px 10px !important;
+        padding: 1rem !important;
+        color: #94a3b8 !important;
+    }}
+
+    /* ── Category tabs ──────────────────────────────────── */
+    .stTabs [data-baseweb="tab-list"] button[role="tab"] {{
+        color: #94a3b8 !important;
+        font-size: 0.9rem;
+    }}
+    .stTabs [data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] {{
+        color: var(--accent) !important;
+        border-bottom-color: var(--accent) !important;
+    }}
+    .stTabs [data-baseweb="tab-indicator"] {{
+        background: var(--accent) !important;
     }}
     </style>
     """
@@ -373,28 +427,66 @@ def render_chat():
 
 
 def render_data_inventory():
-    st.markdown("### 📦 Data Inventory")
-    st.caption("Your synced emails and messages.")
+    st.markdown("### 📦 Command Center")
+    st.caption("Your synced emails, jobs, and data at a glance.")
 
     msgs = fetch_messages()
+
     if not msgs:
         st.info("No messages found. Connect Gmail and sync to get started.")
         return
 
-    rows = []
-    for m in msgs:
-        rows.append({
-            "Source": m.get("platform", "").upper(),
-            "Sender": m.get("sender", "—"),
-            "Subject / Content": m.get("subject") or (m.get("content", "")[:80] if m.get("content") else "—"),
-            "Priority": m.get("priority_score", 0),
-            "Category": m.get("category") or "—",
-        })
+    critical = [m for m in msgs if m.get("priority_score", 0) >= 9]
+    action   = [m for m in msgs if 7 <= m.get("priority_score", 0) <= 8]
+    low      = [m for m in msgs if m.get("priority_score", 0) < 7]
 
-    if rows:
-        import pandas as pd
-        df = pd.DataFrame(rows)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    # ── KPI cards ──────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="aso-kpi">
+        <p class="kpi-value" style="color:#ef4444">""" + str(len(critical)) + """</p>
+        <p class="kpi-label">🔴 Critical</p>
+      </div>
+      <div class="aso-kpi">
+        <p class="kpi-value" style="color:#f59e0b">""" + str(len(action)) + """</p>
+        <p class="kpi-label">🟡 Action Needed</p>
+      </div>
+      <div class="aso-kpi">
+        <p class="kpi-value" style="color:#10b981">""" + str(len(low)) + """</p>
+        <p class="kpi-label">🟢 Low Priority</p>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Tabs by category ───────────────────────────────────────────────────
+    all_msgs = msgs.copy()
+    categories = list({m.get("category") for m in msgs if m.get("category")} | {"All"})
+    categories.sort(key=lambda c: (c != "All", c))
+
+    tab_labels = ["All"] + [c for c in categories if c != "All"]
+    tabs = st.tabs(tab_labels)
+
+    for tab, label in zip(tabs, tab_labels):
+        with tab:
+            pool = all_msgs if label == "All" else [m for m in all_msgs if m.get("category") == label]
+            if not pool:
+                st.caption("No messages here. Sync your inbox!")
+                continue
+            for m in pool:
+                platform = m.get("platform", "").upper() or "—"
+                sender   = m.get("sender") or "Unknown"
+                score    = m.get("priority_score", 0)
+                subject  = m.get("subject") or "No subject"
+                content  = m.get("content") or "No content"
+                cat      = m.get("category") or "—"
+                head = f"**[{platform}]** {sender} — **Priority:** {score}"
+                body = f"**Subject:** {subject}\n\n**Category:** {cat}\n\n{content[:500]}"
+                if len(content) > 500:
+                    body += "\n\n…(truncated)"
+                with st.expander(head, expanded=False):
+                    st.markdown(body)
+                    if st.button("Draft Reply", key=f"reply_{m.get('id','')}", size="small"):
+                        st.info("Reply composer coming soon!")
 
 
 def render_job_tracker():
