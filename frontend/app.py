@@ -404,7 +404,7 @@ def init_session():
 
 def render_chat():
     st.markdown("### 💬 Chat")
-    st.caption("Ask anything about your emails, jobs, or files.")
+    st.caption("Talk to Aso. Ask questions about your inbox, draft emails, or manage your schedule.")
 
     for msg in st.session_state["messages"]:
         with st.chat_message(msg["role"]):
@@ -428,7 +428,7 @@ def render_chat():
 
 def render_data_inventory():
     st.markdown("### 📦 Command Center")
-    st.caption("Your synced emails, jobs, and data at a glance.")
+    st.caption("This is your central command center. Aso filters your connected data by priority so you can focus on what matters most. Sync your inbox to see updates.")
 
     msgs = fetch_messages()
 
@@ -441,19 +441,22 @@ def render_data_inventory():
     low      = [m for m in msgs if m.get("priority_score", 0) < 7]
 
     # ── KPI cards ──────────────────────────────────────────────────────────
-    st.markdown("""
+    st.markdown(f"""
     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
       <div class="aso-kpi">
-        <p class="kpi-value" style="color:#ef4444">""" + str(len(critical)) + """</p>
+        <p class="kpi-value" style="color:#ef4444">{len(critical)}</p>
         <p class="kpi-label">🔴 Critical</p>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px">Needs immediate attention</p>
       </div>
       <div class="aso-kpi">
-        <p class="kpi-value" style="color:#f59e0b">""" + str(len(action)) + """</p>
+        <p class="kpi-value" style="color:#f59e0b">{len(action)}</p>
         <p class="kpi-label">🟡 Action Needed</p>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px">Follow up within 48 hours</p>
       </div>
       <div class="aso-kpi">
-        <p class="kpi-value" style="color:#10b981">""" + str(len(low)) + """</p>
+        <p class="kpi-value" style="color:#10b981">{len(low)}</p>
         <p class="kpi-label">🟢 Low Priority</p>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px">Review when you have time</p>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -480,18 +483,26 @@ def render_data_inventory():
                 content  = m.get("content") or "No content"
                 cat      = m.get("category") or "—"
                 head = f"**[{platform}]** {sender} — **Priority:** {score}"
-                body = f"**Subject:** {subject}\n\n**Category:** {cat}\n\n{content[:500]}"
+                cat_desc = {
+                    "work": "Professional communication from your job or clients.",
+                    "job": "Recruitment and career-related messages.",
+                    "personal": "Messages from friends, family, or personal accounts.",
+                    "newsletter": "Marketing emails, updates, and subscriptions.",
+                    "urgent": "Time-sensitive items requiring immediate response.",
+                }
+                cat_text = cat_desc.get((m.get("category") or "").lower(), f"Message categorized as {cat}.")
+                body = f"**Subject:** {subject}\n\n**Category:** {cat} — {cat_text}\n\n{content[:500]}"
                 if len(content) > 500:
                     body += "\n\n…(truncated)"
                 with st.expander(head, expanded=False):
                     st.markdown(body)
-                    if st.button("Draft Reply", key=f"reply_{m.get('id','')}", size="small"):
+                    if st.button("Draft Reply", key=f"reply_{m.get('id','')}"):
                         st.info("Reply composer coming soon!")
 
 
 def render_job_tracker():
     st.markdown("### 💼 Job Tracker")
-    st.caption("Track your job applications and their status.")
+    st.caption("Manage your career pipeline. Drag and drop applications between stages, or add a new application manually.")
 
     jobs = fetch_jobs()
 
@@ -550,7 +561,7 @@ def render_job_tracker():
 
 def render_integrations():
     st.markdown("### 🔌 Integrations")
-    st.caption("Connect your accounts to sync messages and data.")
+    st.caption("Connect your platforms. Once connected, Aso will automatically ingest, filter, and prioritize your data.")
 
     if st.button("📧 Sync Emails (Gmail)", key="sync_btn"):
         with st.spinner("Syncing..."):
