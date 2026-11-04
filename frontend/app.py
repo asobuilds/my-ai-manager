@@ -385,6 +385,23 @@ def update_profile(data: dict) -> tuple[bool, str]:
         return False, f"Error: {e}"
 
 
+def generate_draft(message_id: str) -> tuple[str, str]:
+    try:
+        resp = httpx.post(f"{BASE_URL}/messages/draft", json={"message_id": message_id}, headers=get_headers(), timeout=30.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return "", "Session expired."
+        if resp.status_code == 404:
+            return "", "Message not found."
+        if resp.status_code != 200:
+            return "", f"Failed ({resp.status_code})."
+        return resp.json().get("draft", ""), ""
+    except httpx.ConnectError:
+        return "", "Cannot connect to server."
+    except Exception as e:
+        return "", f"Error: {e}"
+
+
 # ── Session init ─────────────────────────────────────────────────────────────
 
 def init_session():
@@ -497,7 +514,23 @@ def render_data_inventory():
                 with st.expander(head, expanded=False):
                     st.markdown(body)
                     if st.button("Draft Reply", key=f"reply_{label}_{idx}_{m.get('id','')}"):
-                        st.info("Reply composer coming soon!")
+                        with st.spinner("Generating draft…"):
+                            draft, err = generate_draft(m["id"])
+                        if err:
+                            st.error(err)
+                        else:
+                            st.session_state[f"draft_{m['id']}"] = draft
+                    if f"draft_{m['id']}" in st.session_state:
+                        st.text_area(
+                            "Draft Reply",
+                            value=st.session_state[f"draft_{m['id']}"],
+                            height=150,
+                            key=f"editor_{m['id']}",
+                            label_visibility="collapsed",
+                        )
+                        if st.button("Send Draft", key=f"send_{m['id']}", type="primary"):
+                            st.toast("Draft sent! (Wire up actual send in next phase)")
+                            del st.session_state[f"draft_{m['id']}"]
 
 
 def render_job_tracker():
