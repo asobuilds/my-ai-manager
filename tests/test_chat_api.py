@@ -33,7 +33,7 @@ class TestChatApi:
             assert resp.status_code == 200
             data = resp.json()
             assert data["response"] == "Hello! How can I help you?"
-            assert data["conversation_id"] is None
+            assert data["conversation_id"] is not None
 
     def test_chat_unread_empty(self, client, auth_headers):
         mock_body = {

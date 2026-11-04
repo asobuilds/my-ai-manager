@@ -164,19 +164,36 @@ class FileCatalog(Base):
     def tags_list(self):
         return self.tags
 
-    @property
-    def tags(self):
-        if self._tags is None:
-            return None
-        return json.loads(self._tags)
-
-    @tags.setter
-    def tags(self, value):
-        if value is None:
-            self._tags = None
-        else:
-            self._tags = json.dumps(value)
-
     __table_args__ = (
         Index("ix_file_catalog_user_id", "user_id"),
+    )
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(String(255), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_conversations_user_id", "user_id"),
+    )
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(String(255), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(20), nullable=False)  # user, assistant, system
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    conversation = relationship("Conversation", back_populates="messages")
+
+    __table_args__ = (
+        Index("ix_chat_messages_conversation_id", "conversation_id"),
     )
