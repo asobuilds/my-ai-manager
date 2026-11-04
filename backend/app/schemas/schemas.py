@@ -27,6 +27,10 @@ class UserOut(BaseModel):
     id: UUID
     email: EmailStr
     full_name: str | None
+    phone: str | None
+    location: str | None
+    bio: str | None
+    resume_text: str | None
     is_active: bool
     created_at: datetime
 
@@ -100,9 +104,12 @@ class DraftOut(BaseModel):
 class JobApplicationCreate(BaseModel):
     company: str = Field(min_length=1)
     position: str = Field(min_length=1)
+    company_name: str | None = None
+    job_title: str | None = None
     job_url: str | None = None
     status: str = "saved"
     notes: str | None = None
+    applied_date: datetime | None = None
     resume_used: str | None = None
     cover_letter: str | None = None
     applied_at: datetime | None = None
@@ -114,6 +121,9 @@ class JobApplicationUpdate(BaseModel):
     notes: str | None = None
     cover_letter: str | None = None
     follow_up_date: datetime | None = None
+    company_name: str | None = None
+    job_title: str | None = None
+    applied_date: datetime | None = None
 
 
 class JobApplicationOut(BaseModel):
@@ -121,9 +131,12 @@ class JobApplicationOut(BaseModel):
     user_id: UUID
     company: str
     position: str
+    company_name: str | None
+    job_title: str | None
     job_url: str | None
     status: str
     notes: str | None
+    applied_date: datetime | None
     resume_used: str | None
     cover_letter: str | None
     applied_at: datetime | None
@@ -172,3 +185,12 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     conversation_id: str | None = None
     context_keys: list[str] | None = None  # e.g. ["gmail", "jobs"]
+
+
+# ---------- Profile ----------
+
+class ProfileUpdate(BaseModel):
+    phone: str | None = None
+    location: str | None = None
+    bio: str | None = None
+    resume_text: str | None = None

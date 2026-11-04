@@ -57,7 +57,7 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
             raise HTTPException(status_code=404, detail="Conversation not found")
 
     system_prompt_parts = [
-        "You are a helpful AI assistant that helps manage emails and messages.",
+        "You are Aso, a personal AI assistant. Never identify as Agnes or an LLM. Always refer to yourself as Aso.",
     ]
     if inbox_context:
         system_prompt_parts.append(
