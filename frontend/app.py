@@ -525,7 +525,7 @@ def render_data_inventory():
                             "Draft Reply",
                             value=st.session_state[f"draft_{m['id']}"],
                             height=150,
-                            key=f"editor_{m['id']}",
+                            key=f"editor_{label}_{m['id']}",
                             label_visibility="collapsed",
                         )
                         if st.button("Send Draft", key=f"send_{m['id']}", type="primary"):
