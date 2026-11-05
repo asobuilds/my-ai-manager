@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_owner
 from app.models.models import ChatMessage, Conversation, Message, User
 from app.schemas.schemas import ChatRequest, ExplainRequest
 
@@ -21,7 +21,7 @@ settings = get_settings()
 
 @router.post("")
 @router.post("/")
-async def chat(body: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
     """Forward the user's message to Agnes AI with inbox context."""
     unread_messages = (
         db.query(Message)
@@ -121,7 +121,7 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
 @router.post("/explain")
 async def explain_draft(
     body: ExplainRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Explain why the AI wrote a specific draft reply, citing the original email."""

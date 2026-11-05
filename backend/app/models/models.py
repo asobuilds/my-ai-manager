@@ -17,6 +17,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
     phone = Column(String(50), nullable=True)
+    role = Column(String(50), default="owner", nullable=False)
     location = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
     resume_text = Column(Text, nullable=True)

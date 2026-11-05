@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_owner
 from app.integrations.gmail import GmailConnector
 from app.integrations.mock_gmail import MockGmailConnector
 from app.models.models import Message, User, UserConnection
@@ -50,7 +50,7 @@ class SendDraftRequest(BaseModel):
 @router.post("/draft")
 async def draft_reply(
     body: DraftRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Generate an AI draft reply for a specific message using Agnes AI."""
@@ -109,7 +109,7 @@ async def draft_reply(
 @router.post("/send")
 def send_draft(
     body: SendDraftRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Mark a message as replied after sending the draft via Gmail."""
@@ -142,7 +142,7 @@ def send_draft(
 
 @router.post("/sync")
 def sync_messages(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Sync messages from connected platforms into the database."""
@@ -160,7 +160,7 @@ def sync_messages(
 
 @router.get("")
 def list_messages(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Return the current user's messages ordered by priority descending."""

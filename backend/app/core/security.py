@@ -32,6 +32,15 @@ def get_current_user(
     return user
 
 
+def get_current_owner(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Require the user to be an owner (role='owner')."""
+    if current_user.role != "owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required")
+    return current_user
+
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (

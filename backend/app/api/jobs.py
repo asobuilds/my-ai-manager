@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_owner
 from app.models.models import JobApplication, User
 from app.schemas.schemas import JobApplicationCreate, JobApplicationOut, JobApplicationUpdate
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 @router.get("", response_model=list[JobApplicationOut])
-def list_jobs(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_jobs(current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
     """List all job applications for the current user."""
     return (
         db.query(JobApplication)
@@ -26,7 +26,7 @@ def list_jobs(current_user: User = Depends(get_current_user), db: Session = Depe
 
 
 @router.post("", response_model=JobApplicationOut, status_code=201)
-def create_job(body: JobApplicationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_job(body: JobApplicationCreate, current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
     """Create a new job application."""
     app = JobApplication(user_id=current_user.id, **body.model_dump())
     db.add(app)
@@ -39,7 +39,7 @@ def create_job(body: JobApplicationCreate, current_user: User = Depends(get_curr
 def update_job(
     job_id: UUID,
     body: JobApplicationUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Update a job application's status or notes."""

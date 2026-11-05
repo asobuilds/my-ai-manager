@@ -54,7 +54,7 @@ def auth_headers(client: TestClient, db_session):
     from app.core.security import hash_password
     from app.models.models import User
 
-    user = User(email="test@example.com", hashed_password=hash_password("testpass123"), full_name="Test User")
+    user = User(email="test@example.com", hashed_password=hash_password("testpass123"), full_name="Test User", role="owner")
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
