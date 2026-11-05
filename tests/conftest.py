@@ -1,6 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
+# Import models so SQLAlchemy knows about all tables
+import app.models.models  # noqa: F401
+
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
 

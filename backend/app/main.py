@@ -6,6 +6,7 @@ from app.api.connections import router as connections_router
 from app.api.jobs import router as jobs_router
 from app.api.messages import router as messages_router
 from app.api.profile import router as profile_router
+from app.api.shop import router as shop_router
 from app.api.user import router as user_router
 from app.api.chat import router as chat_router
 from app.core.config import get_settings
@@ -38,6 +39,7 @@ app.include_router(user_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(profile_router, prefix="/api/v1")
 app.include_router(jobs_router, prefix="/api/v1")
+app.include_router(shop_router, prefix="/api/v1")
 
 
 @app.get("/health")

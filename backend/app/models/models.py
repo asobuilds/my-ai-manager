@@ -204,3 +204,43 @@ class ChatMessage(Base):
     __table_args__ = (
         Index("ix_chat_messages_conversation_id", "conversation_id"),
     )
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    sku = Column(String(100), unique=True, nullable=False)
+    name = Column(String(255), nullable=False)
+    category = Column(String(100), nullable=True)
+    price = Column(Integer, nullable=False)  # stored in cents to avoid float issues
+    stock_quantity = Column(Integer, default=0)
+    reorder_level = Column(Integer, default=5)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    movements = relationship("StockMovement", back_populates="product", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_products_user_id", "user_id"),
+        Index("ix_products_category", "category"),
+    )
+
+
+class StockMovement(Base):
+    __tablename__ = "stock_movements"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    movement_type = Column(String(10), nullable=False)  # "in" or "out"
+    quantity = Column(Integer, nullable=False)
+    reason = Column(String(255), nullable=True)  # sale, restock, adjustment, etc.
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product", back_populates="movements")
+
+    __table_args__ = (
+        Index("ix_stock_movements_product_id", "product_id"),
+        Index("ix_stock_movements_created_at", "created_at"),
+    )

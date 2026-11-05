@@ -204,3 +204,56 @@ class ProfileUpdate(BaseModel):
     location: str | None = None
     bio: str | None = None
     resume_text: str | None = None
+
+
+# ---------- Shop / Inventory ----------
+
+class ProductCreate(BaseModel):
+    sku: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=255)
+    category: str | None = None
+    price: int = Field(ge=0)  # in cents
+    stock_quantity: int = Field(ge=0, default=0)
+    reorder_level: int = Field(ge=0, default=5)
+
+
+class ProductUpdate(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    price: int | None = Field(default=None, ge=0)
+    stock_quantity: int | None = Field(default=None, ge=0)
+    reorder_level: int | None = Field(default=None, ge=0)
+
+
+class ProductResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    sku: str
+    name: str
+    category: str | None
+    price: int  # cents
+    stock_quantity: int
+    reorder_level: int
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
+class StockMovementCreate(BaseModel):
+    movement_type: str = Field(pattern="^(in|out)$")
+    quantity: int = Field(ge=1)
+    reason: str | None = None
+
+
+class StockMovementResponse(BaseModel):
+    id: UUID
+    product_id: UUID
+    movement_type: str
+    quantity: int
+    reason: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
