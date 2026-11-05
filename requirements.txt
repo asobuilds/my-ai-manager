@@ -37,6 +37,7 @@ jsonschema-specifications==2025.9.1
 MarkupSafe==3.0.4
 multidict==7.2.1
 narwhals==2.28.0
+neonui==0.1.0
 numpy==2.5.4
 oauthlib==4.0.1
 opentelemetry-api==1.45.2
@@ -72,9 +73,13 @@ requests-oauthlib==2.0.0
 rpds-py==2026.9.1
 rsa==4.9.1
 six==1.17.0
+SpeechRecognition==3.17.0
 SQLAlchemy==2.1.8
 starlette==1.10.0
 streamlit==1.66.1
+streamlit-facade==0.1.6
+streamlit-kanban==0.3.2.post1
+streamlit_mic_recorder==0.0.8
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.6

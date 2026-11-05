@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.models import ChatMessage, Conversation, Message, User
-from app.schemas.schemas import ChatRequest
+from app.schemas.schemas import ChatRequest, ExplainRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 settings = get_settings()
@@ -116,3 +116,64 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
     db.commit()
 
     return {"response": response_text, "conversation_id": conversation_id}
+
+
+@router.post("/explain")
+async def explain_draft(
+    body: ExplainRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Explain why the AI wrote a specific draft reply, citing the original email."""
+    msg = db.query(Message).filter(
+        Message.id == uuid.UUID(body.message_id),
+        Message.user_id == current_user.id,
+    ).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    system_prompt = (
+        "You are Aso, a personal AI assistant. Never identify as Agnes or an LLM. "
+        "Always refer to yourself as Aso. "
+        "Your job is to explain WHY you wrote a draft reply the way you did. "
+        "Reference specific details from the original email to justify your word choices, tone, and structure."
+    )
+    user_prompt = (
+        f"Original email:\n"
+        f"  From: {msg.sender or '(unknown)'}\n"
+        f"  Subject: {getattr(msg, 'subject', None) or '(no subject)'}\n"
+        f"  Content:\n{msg.content or '(no content)'}\n\n"
+        f"Draft reply I generated:\n{body.draft_text}\n\n"
+        f"Explain in 2-4 sentences why you wrote this draft — what cues from the original email influenced your word choice, tone, and structure?"
+    )
+
+    base_url = settings.AGNES_BASE_URL.rstrip("/")
+    url = base_url + "/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {settings.AGNES_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "agnes-2.5-flash",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+    except (httpx.HTTPStatusError, httpx.HTTPError) as exc:
+        raise HTTPException(status_code=502, detail=f"Agnes AI API error: {exc}")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Agnes AI request failed: {exc}")
+
+    choices = data.get("choices", [])
+    if not choices:
+        raise HTTPException(status_code=502, detail="No response from Agnes AI")
+    explanation = choices[0].get("message", {}).get("content", "")
+
+    return {"explanation": explanation}

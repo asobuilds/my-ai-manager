@@ -1,9 +1,15 @@
 """Aso Data Assistant — glassmorphism dashboard."""
 from __future__ import annotations
 
+import base64
+import io
 import streamlit as st
 import httpx
 from streamlit_kanban import st_kanban
+from streamlit_mic_recorder import mic_recorder
+import speech_recognition as sr
+from facade import theme, Card, Button, Metric, Tabs, Textarea, Input, Toggle, Radio, Select, Accordion, Alert, Badge, Separator
+from neonui import set_page_background
 
 # Must be first Streamlit call
 st.set_page_config(page_title="Aso Data Assistant", page_icon="🤖", layout="wide")
@@ -37,201 +43,6 @@ THEME_GRADIENTS = {
     "emerald": ("#0f1e1a", "#021410"),
     "amber":   ("#1e1a0f", "#141002"),
 }
-
-
-# ── CSS ──────────────────────────────────────────────────────────────────────
-
-def _css(dark: bool, theme: str) -> str:
-    hex_color = THEME_HEX.get(theme, "#3b82f6")
-    gradient = THEME_GRADIENTS.get(theme, ("#0f1a2e", "#020617"))
-    light_tint, dark_tint = gradient
-    if dark:
-        txt = "#f8fafc"
-        muted = "#94a3b8"
-        card_bg = "rgba(255,255,255,0.05)"
-        card_border = "rgba(255,255,255,0.08)"
-    else:
-        txt = "#1e293b"
-        muted = "#64748b"
-        card_bg = "rgba(255,255,255,0.65)"
-        card_border = "rgba(255,255,255,0.80)"
-
-    return f"""
-    <style>
-    /* ── Theme variables ─────────────────────────────────── */
-    :root {{
-        --accent: {hex_color};
-        --accent-muted: {hex_color};
-    }}
-
-    /* ── Main app background — tinted per theme ─────────── */
-    [data-testid="stAppViewContainer"] > div:first-child {{
-        background: linear-gradient(135deg, {light_tint} 0%, {dark_tint} 100%) !important;
-    }}
-    .stApp {{
-        background: linear-gradient(135deg, {light_tint} 0%, {dark_tint} 100%) !important;
-    }}
-
-    /* ── Global text colors ─────────────────────────────── */
-    h1, h2, h3, h4, h5, h6,
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
-    label, .stMarkdown strong {{
-        color: {txt} !important;
-    }}
-    p, span, li, a, .stMarkdown,
-    .stTextInput label, .stSelectbox label, .stRadio label {{
-        color: {muted} !important;
-    }}
-
-    /* ── Primary button override ────────────────────────── */
-    .stButton > button[kind="primary"],
-    .stButton > button[aria-label*="primary"] {{
-        background: var(--accent) !important;
-        border-color: var(--accent) !important;
-        color: #fff !important;
-        font-weight: 600;
-        border-radius: 10px !important;
-        transition: opacity 0.15s;
-    }}
-    .stButton > button[kind="primary"]:hover {{
-        opacity: 0.8;
-    }}
-
-    /* ── Secondary / default buttons ────────────────────── */
-    .stButton > button:not([kind="primary"]) {{
-        background: {card_bg} !important;
-        color: {txt} !important;
-        border: 1px solid var(--accent-muted) !important;
-        border-radius: 10px !important;
-    }}
-
-    /* ── Input fields ───────────────────────────────────── */
-    .stTextInput > div > div > input,
-    .stSelectbox > div > div:first-child > div:first-child {{
-        background: rgba(255,255,255,0.08) !important;
-        border: 1px solid var(--accent-muted) !important;
-        border-radius: 8px !important;
-        color: {txt} !important;
-    }}
-    .stTextInput > div > div > input::placeholder {{
-        color: {muted} !important;
-    }}
-
-    /* ── Chat bubbles ───────────────────────────────────── */
-    [data-testid="stChatBubble"] {{
-        border-radius: 14px !important;
-    }}
-    .stChatMessage[data-testid="stChatMessageUser"] [data-testid="stChatBubble"] {{
-        background: var(--accent) !important;
-    }}
-
-    /* ── Sidebar ─────────────────────────────────────────── */
-    section[data-testid="stSidebar"] {{
-        background: rgba(0,0,0,0.25) !important;
-        border-right: 1px solid var(--accent-muted) !important;
-    }}
-    section[data-testid="stSidebar"] label {{
-        color: {txt} !important;
-    }}
-    /* Sidebar selected radio */
-    section[data-testid="stSidebar"] .stRadio > label {{
-        color: var(--accent) !important;
-        font-weight: 600;
-    }}
-
-    /* ── Main content vertical blocks (compact glass cards) ─── */
-    section.main > div > div:nth-child(2) > div > div {{
-        background: {card_bg} !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--accent-muted) !important;
-        border-radius: 14px !important;
-        padding: 0.75rem 1rem !important;
-        margin-bottom: 0.5rem !important;
-    }}
-
-    /* ── Toast / notification ──────────────────────────── */
-    .stAlert {{
-        background: {card_bg} !important;
-        backdrop-filter: blur(12px);
-        border: 1px solid var(--accent-muted) !important;
-        border-radius: 10px !important;
-        color: {txt} !important;
-    }}
-
-    /* ── Divider ────────────────────────────────────────── */
-    hr {{
-        border-color: var(--accent-muted) !important;
-    }}
-
-    /* ── Chat input ─────────────────────────────────────── */
-    .stChatInputContainer textarea {{
-        background: rgba(255,255,255,0.06) !important;
-        border: 1px solid var(--accent-muted) !important;
-        border-radius: 12px !important;
-        color: {txt} !important;
-    }}
-
-    /* ── KPI summary cards ──────────────────────────────── */
-    .aso-kpi {{
-        background: rgba(255,255,255,0.05) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 16px !important;
-        padding: 1.25rem 1.5rem !important;
-        text-align: center;
-    }}
-    .aso-kpi .kpi-value {{
-        font-size: 2.5rem !important;
-        font-weight: 700 !important;
-        line-height: 1.1 !important;
-        margin: 0 !important;
-    }}
-    .aso-kpi .kpi-label {{
-        font-size: 0.85rem !important;
-        color: #94a3b8 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 0.25rem !important;
-    }}
-
-    /* ── Message expanders ──────────────────────────────── */
-    .aso-expander summary {{
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 10px !important;
-        padding: 0.6rem 1rem !important;
-        color: #f1f5f9 !important;
-        font-weight: 500;
-    }}
-    .aso-expander[open] summary {{
-        border-bottom-left-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }}
-    .aso-expander .expander-content {{
-        background: rgba(255,255,255,0.03) !important;
-        border: 1px solid rgba(255,255,255,0.06) !important;
-        border-top: none !important;
-        border-radius: 0 0 10px 10px !important;
-        padding: 1rem !important;
-        color: #94a3b8 !important;
-    }}
-
-    /* ── Category tabs ──────────────────────────────────── */
-    .stTabs [data-baseweb="tab-list"] button[role="tab"] {{
-        color: #94a3b8 !important;
-        font-size: 0.9rem;
-    }}
-    .stTabs [data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] {{
-        color: var(--accent) !important;
-        border-bottom-color: var(--accent) !important;
-    }}
-    .stTabs [data-baseweb="tab-indicator"] {{
-        background: var(--accent) !important;
-    }}
-    </style>
-    """
 
 
 # ── API helpers ──────────────────────────────────────────────────────────────
@@ -370,6 +181,18 @@ def fetch_profile() -> dict | None:
         return None
 
 
+def get_connection_status() -> dict:
+    try:
+        resp = httpx.get(f"{BASE_URL}/me/connections/status", headers=get_headers(), timeout=10.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+        return resp.json() if resp.status_code == 200 else {"gmail_connected": False}
+    except httpx.ConnectError:
+        return {"gmail_connected": False}
+    except Exception:
+        return {"gmail_connected": False}
+
+
 def update_profile(data: dict) -> tuple[bool, str]:
     try:
         resp = httpx.put(f"{BASE_URL}/profile", json=data, headers=get_headers(), timeout=15.0)
@@ -419,6 +242,34 @@ def send_draft(message_id: str, draft_text: str) -> tuple[bool, str]:
         return False, f"Error: {e}"
 
 
+def explain_draft(message_id: str, draft_text: str) -> tuple[str, str]:
+    try:
+        resp = httpx.post(f"{BASE_URL}/chat/explain", json={"message_id": message_id, "draft_text": draft_text}, headers=get_headers(), timeout=30.0)
+        if resp.status_code == 401:
+            st.session_state["logged_in"] = False
+            return "", "Session expired."
+        if resp.status_code == 404:
+            return "", "Message not found."
+        if resp.status_code != 200:
+            return "", f"Failed ({resp.status_code})."
+        return resp.json().get("explanation", ""), ""
+    except httpx.ConnectError:
+        return "", "Cannot connect to server."
+    except Exception as e:
+        return "", f"Error: {e}"
+
+
+def _transcribe_audio(audio_bytes: bytes, sample_rate: int) -> str:
+    """Transcribe recorded audio using speech_recognition (offline)."""
+    try:
+        rh = sr.Recognizer()
+        with sr.AudioFile(io.BytesIO(audio_bytes), sample_rate=sample_rate) as src:
+            audio = rh.record(src)
+        return rh.recognize_google(audio).strip()
+    except Exception:
+        return ""
+
+
 # ── Session init ─────────────────────────────────────────────────────────────
 
 def init_session():
@@ -444,7 +295,22 @@ def render_chat():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    if prompt := st.chat_input("Type your message..."):
+    col_input, col_mic = st.columns([5, 1])
+    with col_input:
+        prompt = st.chat_input("Type your message...")
+    with col_mic:
+        audio = mic_recorder(
+            start_prompt="🎤",
+            stop_prompt="⏹",
+            just_once=True,
+            key="chat_mic",
+        )
+    if audio is not None:
+        text = _transcribe_audio(audio["bytes"], audio["sample_rate"])
+        if text:
+            prompt = text
+
+    if prompt:
         st.session_state["messages"].append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -467,7 +333,7 @@ def render_data_inventory():
     msgs = fetch_messages()
 
     if not msgs:
-        st.info("No messages found. Connect Gmail and sync to get started.")
+        Alert("No messages found. Connect Gmail and sync to get started.", variant="info")
         return
 
     critical = [m for m in msgs if m.get("priority_score", 0) >= 9]
@@ -475,25 +341,16 @@ def render_data_inventory():
     low      = [m for m in msgs if m.get("priority_score", 0) < 7]
 
     # ── KPI cards ──────────────────────────────────────────────────────────
-    st.markdown(f"""
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-      <div class="aso-kpi">
-        <p class="kpi-value" style="color:#ef4444">{len(critical)}</p>
-        <p class="kpi-label">🔴 Critical</p>
-        <p style="font-size:12px; color:#94a3b8; margin-top:4px">Needs immediate attention</p>
-      </div>
-      <div class="aso-kpi">
-        <p class="kpi-value" style="color:#f59e0b">{len(action)}</p>
-        <p class="kpi-label">🟡 Action Needed</p>
-        <p style="font-size:12px; color:#94a3b8; margin-top:4px">Follow up within 48 hours</p>
-      </div>
-      <div class="aso-kpi">
-        <p class="kpi-value" style="color:#10b981">{len(low)}</p>
-        <p class="kpi-label">🟢 Low Priority</p>
-        <p style="font-size:12px; color:#94a3b8; margin-top:4px">Review when you have time</p>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        Metric("🔴 Critical", len(critical), key="kpi_critical")
+        st.caption("Needs immediate attention")
+    with c2:
+        Metric("🟡 Action Needed", len(action), key="kpi_action")
+        st.caption("Follow up within 48 hours")
+    with c3:
+        Metric("🟢 Low Priority", len(low), key="kpi_low")
+        st.caption("Review when you have time")
 
     # ── Tabs by category ───────────────────────────────────────────────────
     all_msgs = msgs.copy()
@@ -501,7 +358,7 @@ def render_data_inventory():
     categories.sort(key=lambda c: (c != "All", c))
 
     tab_labels = ["All"] + [c for c in categories if c != "All"]
-    tabs = st.tabs(tab_labels)
+    tabs = Tabs(tab_labels)
 
     for tab, label in zip(tabs, tab_labels):
         with tab:
@@ -528,32 +385,39 @@ def render_data_inventory():
                 body = f"**Subject:** {subject}\n\n**Category:** {cat} — {cat_text}\n\n{content[:500]}"
                 if len(content) > 500:
                     body += "\n\n…(truncated)"
-                with st.expander(head, expanded=False):
+                with Accordion(head, expanded=False):
                     st.markdown(body)
-                    if st.button("Draft Reply", key=f"reply_{label}_{idx}_{m.get('id','')}"):
+                    if Button("Draft Reply", variant="outline", key=f"reply_{label}_{idx}_{m.get('id','')}"):
                         with st.spinner("Generating draft…"):
                             draft, err = generate_draft(m["id"])
                         if err:
-                            st.error(err)
+                            Alert(err, variant="error")
                         else:
                             st.session_state[f"draft_{m['id']}"] = draft
                     if f"draft_{m['id']}" in st.session_state:
-                        st.text_area(
-                            "Draft Reply",
-                            value=st.session_state[f"draft_{m['id']}"],
+                        draft_text = Textarea(
+                            placeholder="Edit your reply here…",
                             height=150,
                             key=f"editor_{label}_{m['id']}",
-                            label_visibility="collapsed",
                         )
-                        if st.button("Send Draft", key=f"send_{label}_{idx}_{m['id']}", type="primary"):
-                            draft_text = st.session_state.get(f"editor_{label}_{m['id']}", "")
-                            ok, msg = send_draft(m["id"], draft_text)
-                            if ok:
-                                st.success("Draft sent successfully!")
-                                del st.session_state[f"draft_{m['id']}"]
-                                st.rerun()
-                            else:
-                                st.error(msg)
+                        btn_col1, btn_col2 = st.columns(2)
+                        with btn_col1:
+                            if Button("Send Draft", variant="default", key=f"send_{label}_{idx}_{m['id']}"):
+                                ok, msg = send_draft(m["id"], draft_text or st.session_state.get(f"draft_{m['id']}", ""))
+                                if ok:
+                                    Alert("Draft sent successfully!", variant="success")
+                                    del st.session_state[f"draft_{m['id']}"]
+                                    st.rerun()
+                                else:
+                                    Alert(msg, variant="error")
+                        with btn_col2:
+                            if Button("Explain", variant="outline", key=f"explain_{label}_{idx}_{m['id']}"):
+                                with st.spinner("Explaining…"):
+                                    explanation, err = explain_draft(m["id"], draft_text or st.session_state.get(f"draft_{m['id']}", ""))
+                                if err:
+                                    Alert(err, variant="error")
+                                else:
+                                    st.markdown(f"**Why this draft:**\n\n{explanation}")
 
 
 def render_job_tracker():
@@ -591,14 +455,15 @@ def render_job_tracker():
 
     st_kanban(columns, key="job_kanban")
 
-    st.divider()
+    Separator()
 
     st.markdown("**➕ Add New Application**")
     with st.form("add_job_form"):
-        comp = st.text_input("Company Name", key="in_company")
-        title = st.text_input("Job Title", key="in_title")
-        status = st.selectbox("Status", ["applied", "saved", "interviewing", "rejected", "offered"], index=0, key="in_status")
-        notes = st.text_area("Notes", height=60, key="in_notes")
+        comp = Input(placeholder="Company Name", key="in_company")
+        title = Input(placeholder="Job Title", key="in_title")
+        raw_status = Select(options=["applied", "saved", "interviewing", "rejected", "offered"], placeholder="Status", key="in_status")
+        status = raw_status or "applied"
+        notes = Textarea(placeholder="Notes", height=60, key="in_notes")
         submitted = st.form_submit_button("Add", type="primary")
         if submitted:
             if not comp or not title:
@@ -607,10 +472,13 @@ def render_job_tracker():
                 ok, msg = create_job({
                     "company_name": comp,
                     "job_title": title,
-                    "status": status,
+                    "status": status or "applied",
                     "notes": notes or None,
                 })
-                st.toast(msg, icon="✅" if ok else "❌")
+                if ok:
+                    Alert(msg, variant="success")
+                else:
+                    Alert(msg, variant="error")
                 if ok:
                     st.rerun()
 
@@ -619,44 +487,40 @@ def render_integrations():
     st.markdown("### 🔌 Integrations")
     st.caption("Connect your platforms. Once connected, Aso will automatically ingest, filter, and prioritize your data.")
 
-    if st.button("📧 Sync Emails (Gmail)", key="sync_btn"):
-        with st.spinner("Syncing..."):
-            ok, msg = sync_emails()
-        st.success(msg) if ok else st.error(msg)
+    status = get_connection_status()
+    gmail_connected = status.get("gmail_connected", False)
+    auth_url = status.get("authorization_url")
+
+    # ── Gmail card ─────────────────────────────────────────────────────────
+    if gmail_connected:
+        Card(title="📧 Gmail", description="Connected — your emails are being synced.")
+        Badge("Connected", variant="success")
+        st.divider()
+        if Button("Sync Now", variant="default", key="sync_btn"):
+            with st.spinner("Syncing…"):
+                ok, msg = sync_emails()
+            Alert(msg, variant="success" if ok else "error")
+    else:
+        Card(title="📧 Gmail", description="Connect your Gmail account to sync emails and send replies.")
+        if auth_url:
+            st.markdown(f'🔗 [Connect with Google]({auth_url}) — opens in a new tab')
+            st.caption("After connecting, click the button below to verify.")
+            if Button("I've Connected — Verify", variant="outline", key="verify_conn"):
+                new_status = get_connection_status()
+                if new_status.get("gmail_connected"):
+                    Alert("Gmail connected successfully!", variant="success")
+                    st.rerun()
+                else:
+                    Alert("Connection not detected yet. Complete the Google sign-in flow first.", variant="warning")
+        else:
+            Alert("Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file.", variant="warning")
 
     st.divider()
 
-    layout = st.session_state["layout_style"]
-
-    if layout == "Grid":
-        cols = st.columns(3)
-        for i, plat in enumerate(PLATFORMS):
-            with cols[i % 3]:
-                connected = st.session_state.get(f"connected_{plat['name']}", False)
-                with st.container(border=True):
-                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
-                    if connected:
-                        st.success("✅ Connected", icon="✅")
-                    else:
-                        if st.button("Connect", key=f"conn_{plat['name']}", use_container_width=True):
-                            st.session_state[f"connected_{plat['name']}"] = True
-                            st.toast(f"Successfully connected to {plat['name']}!")
-                            st.rerun()
-    else:
-        for plat in PLATFORMS:
-            connected = st.session_state.get(f"connected_{plat['name']}", False)
-            with st.container(border=True):
-                cols = st.columns([3, 1])
-                with cols[0]:
-                    st.markdown(f"**{plat['emoji']}  {plat['name']}**")
-                with cols[1]:
-                    if connected:
-                        st.success("✅", icon="✅")
-                    else:
-                        if st.button("Connect", key=f"conn_l_{plat['name']}", use_container_width=True):
-                            st.session_state[f"connected_{plat['name']}"] = True
-                            st.toast(f"Successfully connected to {plat['name']}!")
-                            st.rerun()
+    # ── Other platforms (placeholder cards) ────────────────────────────────
+    for plat in PLATFORMS[1:]:
+        Card(title=f"{plat['emoji']}  {plat['name']}")
+        Badge("Coming soon", variant="muted")
 
 
 def render_settings():
@@ -666,12 +530,24 @@ def render_settings():
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("**Theme Color**")
-        new_theme = st.selectbox("Color", THEME_COLORS, index=THEME_COLORS.index(st.session_state["theme_color"]), key="_theme_sel")
+        new_theme = Select(
+            options=THEME_COLORS,
+            placeholder="Choose a color…",
+            label="Color",
+            key="_theme_sel",
+        )
+        if new_theme is None:
+            new_theme = st.session_state["theme_color"]
         st.markdown("**Dark Mode**")
-        new_dark = st.toggle("Dark", value=st.session_state["dark_mode"], key="_dark_tog")
+        new_dark = Toggle("Dark", value=st.session_state["dark_mode"], key="_dark_tog")
     with c2:
         st.markdown("**Layout**")
-        new_layout = st.radio("Style", ["Grid", "List"], index=["Grid", "List"].index(st.session_state["layout_style"]), key="_layout_rad")
+        new_layout = Radio(
+            options=["Grid", "List"],
+            label="Style",
+            index=["Grid", "List"].index(st.session_state["layout_style"]),
+            key="_layout_rad",
+        )
 
     # Live apply — rerun on any change
     if (new_theme != st.session_state["theme_color"]
@@ -688,23 +564,25 @@ def render_profile():
 
     profile = fetch_profile()
     if not profile:
-        st.error("Could not load profile. Please log in again.")
+        Alert("Could not load profile. Please log in again.", variant="error")
         return
 
     current_phone = profile.get("phone") or ""
     current_location = profile.get("location") or ""
     current_bio = profile.get("bio") or ""
 
-    st.markdown(f"**Email:** {profile.get('email', 'N/A')}")
-    st.markdown(f"**Full Name:** {profile.get('full_name') or '—'}")
+    Card(
+        title=f"👤 {profile.get('full_name') or 'User'}",
+        description=f"Email: {profile.get('email', 'N/A')} · Status: Active",
+    )
 
-    st.divider()
+    Separator()
     st.markdown("**Edit Profile**")
 
     with st.form("profile_form"):
-        phone = st.text_input("Phone", value=current_phone, key="prof_phone")
-        location = st.text_input("Location", value=current_location, key="prof_location")
-        bio = st.text_area("Bio", value=current_bio, height=80, key="prof_bio")
+        phone = Input(placeholder="Phone", value=current_phone, key="prof_phone")
+        location = Input(placeholder="Location", value=current_location, key="prof_location")
+        bio = Textarea(placeholder="Bio", value=current_bio, height=80, key="prof_bio")
         submitted = st.form_submit_button("Save Profile", type="primary")
         if submitted:
             ok, msg = update_profile({
@@ -712,12 +590,18 @@ def render_profile():
                 "location": location or None,
                 "bio": bio or None,
             })
-            st.toast(msg, icon="✅" if ok else "❌")
+            Alert(msg, variant="success" if ok else "error")
             if ok:
                 st.rerun()
 
-    st.divider()
-    if st.button("Log Out", key="logout_btn", use_container_width=True):
+    Separator()
+    st.markdown("**Avatar**")
+    avatar = st.file_uploader("Upload avatar", type=["png", "jpg", "jpeg", "gif"], key="avatar_upload")
+    if avatar is not None:
+        st.image(avatar, width=120)
+        st.caption("Avatar upload ready for next phase.")
+
+    if Button("Log Out", variant="destructive", key="logout_btn"):
         st.session_state["logged_in"] = False
         st.session_state["access_token"] = None
         st.session_state["email"] = None
@@ -737,30 +621,30 @@ PAGES = {"💬 Chat": render_chat, "📦 Data Inventory": render_data_inventory,
 # ── Login ────────────────────────────────────────────────────────────────────
 
 def render_login():
-    tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
+    tab1, tab2 = Tabs(["Sign In", "Sign Up"])
 
     with tab1:
         st.markdown("<h3>Welcome back</h3>", unsafe_allow_html=True)
-        email = st.text_input("Email", key="l_email")
+        email = Input(placeholder="Email", key="l_email")
         password = st.text_input("Password", type="password", key="l_pwd")
-        if st.button("Log In", type="primary", use_container_width=True, key="l_btn"):
+        if Button("Log In", variant="default", key="l_btn"):
             if not email or not password:
                 st.error("Enter both email and password.")
                 return
             ok, msg = login(email, password)
             if ok:
-                st.success("Logged in!")
+                Alert("Logged in!", variant="success")
                 st.rerun()
             else:
-                st.error(msg)
+                Alert(msg, variant="error")
 
     with tab2:
         st.markdown("<h3>Create an account</h3>", unsafe_allow_html=True)
-        full_name = st.text_input("Full Name", key="r_name")
-        email = st.text_input("Email", key="r_email")
+        full_name = Input(placeholder="Full Name", key="r_name")
+        email = Input(placeholder="Email", key="r_email")
         password = st.text_input("Password", type="password", key="r_pwd")
         confirm = st.text_input("Confirm Password", type="password", key="r_confirm")
-        if st.button("Sign Up", type="primary", use_container_width=True, key="r_btn"):
+        if Button("Sign Up", variant="default", key="r_btn"):
             if not email or not password:
                 st.error("Enter both email and password.")
                 return
@@ -769,9 +653,9 @@ def render_login():
                 return
             ok, msg = register(email, password, full_name or None)
             if ok:
-                st.success(msg)
+                Alert(msg, variant="success")
             else:
-                st.error(msg)
+                Alert(msg, variant="error")
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
@@ -797,9 +681,24 @@ def render_sidebar():
 def main():
     init_session()
     dark = st.session_state["dark_mode"]
-    theme = st.session_state["theme_color"]
+    theme_name = st.session_state["theme_color"]
+    hex_color = THEME_HEX.get(theme_name, "#3b82f6")
+    gradient = THEME_GRADIENTS.get(theme_name, ("#0f1a2e", "#020617"))
+    light_tint, dark_tint = gradient
 
-    st.markdown(_css(dark, theme), unsafe_allow_html=True)
+    # Apply facade theme tokens + neonui background
+    theme.apply(
+        preset="dark" if dark else "light",
+        primary=hex_color,
+        primary_foreground="#ffffff",
+        background=dark_tint,
+        foreground="#f8fafc" if dark else "#1e293b",
+        muted="rgba(255,255,255,0.06)" if dark else "rgba(255,255,255,0.65)",
+        muted_foreground="#94a3b8" if dark else "#64748b",
+        border="rgba(255,255,255,0.10)" if dark else "rgba(255,255,255,0.80)",
+        radius="10px",
+    )
+    set_page_background(gradient=f"linear-gradient(135deg, {light_tint} 0%, {dark_tint} 100%)")
 
     if st.session_state.get("logged_in"):
         render_sidebar()

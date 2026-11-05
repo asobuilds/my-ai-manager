@@ -57,6 +57,11 @@ class ConnectionOut(BaseModel):
         from_attributes = True
 
 
+class ConnectionStatus(BaseModel):
+    gmail_connected: bool = False
+    authorization_url: str | None = None
+
+
 # ---------- Drafts ----------
 
 class DraftCreate(BaseModel):
@@ -185,6 +190,11 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     conversation_id: str | None = None
     context_keys: list[str] | None = None  # e.g. ["gmail", "jobs"]
+
+
+class ExplainRequest(BaseModel):
+    message_id: str
+    draft_text: str
 
 
 # ---------- Profile ----------

@@ -1,4 +1,4 @@
-"""Messages API endpoints — sync, list, and draft reply."""
+"""Messages API endpoints — sync, list, draft reply, and send."""
 from __future__ import annotations
 
 import json
@@ -12,14 +12,30 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.integrations.gmail import GmailConnector
 from app.integrations.mock_gmail import MockGmailConnector
-from app.models.models import Message, User
+from app.models.models import Message, User, UserConnection
 from app.services.ingestion import sync_messages_for_user
 
 # ruff: noqa: B008
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 settings = get_settings()
+
+
+def _get_gmail_connection(
+    user: User, db: Session,
+) -> UserConnection | None:
+    """Return the active Google/Gmail connection for the user, or None."""
+    return (
+        db.query(UserConnection)
+        .filter(
+            UserConnection.user_id == user.id,
+            UserConnection.provider == "google",
+            UserConnection.is_active == True,  # noqa: E712
+        )
+        .first()
+    )
 
 
 class DraftRequest(BaseModel):
@@ -96,13 +112,29 @@ def send_draft(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Mark a message as replied after sending the draft."""
+    """Mark a message as replied after sending the draft via Gmail."""
     msg = db.query(Message).filter(
         Message.id == UUID(body.message_id),
         Message.user_id == current_user.id,
     ).first()
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
+
+    conn = _get_gmail_connection(current_user, db)
+    if conn and conn.access_token:
+        try:
+            connector = GmailConnector(
+                access_token=conn.access_token,
+                refresh_token=conn.refresh_token,
+            )
+            success = connector.send_reply(msg.external_id, body.draft_text)
+            if not success:
+                raise HTTPException(status_code=502, detail="Failed to send email via Gmail")
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Gmail send error: {exc}")
+
     msg.status = "replied"
     db.commit()
     return {"status": "success"}
@@ -114,7 +146,14 @@ def sync_messages(
     db: Session = Depends(get_db),
 ):
     """Sync messages from connected platforms into the database."""
-    connector = MockGmailConnector()
+    conn = _get_gmail_connection(current_user, db)
+    if conn and conn.access_token:
+        connector = GmailConnector(
+            access_token=conn.access_token,
+            refresh_token=conn.refresh_token,
+        )
+    else:
+        connector = MockGmailConnector()
     synced = sync_messages_for_user(current_user.id, connector, db)
     return {"synced": synced}
 

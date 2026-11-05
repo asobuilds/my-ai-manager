@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.models import User, UserConnection, Draft, JobApplication, FileCatalog
 from app.schemas.schemas import (
-    ConnectionCreate, ConnectionOut,
+    ConnectionCreate, ConnectionOut, ConnectionStatus,
     DraftCreate, DraftOut, DraftUpdate,
     JobApplicationCreate, JobApplicationOut, JobApplicationUpdate,
     FileCatalogCreate, FileCatalogOut,
@@ -18,6 +18,37 @@ router = APIRouter(prefix="/me", tags=["user"])
 
 
 # ── Connections ──────────────────────────────────────────────
+
+@router.get("/connections/status", response_model=ConnectionStatus)
+def connection_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the user's connection status and Google OAuth login URL if needed."""
+    from app.core.config import get_settings
+    from app.integrations.google_auth import generate_authorization_url
+
+    conn = db.query(UserConnection).filter(
+        UserConnection.user_id == current_user.id,
+        UserConnection.provider == "google",
+        UserConnection.is_active == True,  # noqa: E712
+    ).first()
+
+    gmail_connected = conn is not None and bool(conn.access_token)
+
+    auth_url = None
+    if not gmail_connected:
+        s = get_settings()
+        if s.GOOGLE_CLIENT_ID and s.GOOGLE_CLIENT_SECRET:
+            auth_url = generate_authorization_url(
+                client_id=s.GOOGLE_CLIENT_ID,
+                client_secret=s.GOOGLE_CLIENT_SECRET,
+                redirect_uri=s.GOOGLE_REDIRECT_URI,
+                state=current_user.id.hex,
+            )
+
+    return ConnectionStatus(gmail_connected=gmail_connected, authorization_url=auth_url)
+
 
 @router.get("/connections", response_model=list[ConnectionOut])
 def list_connections(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

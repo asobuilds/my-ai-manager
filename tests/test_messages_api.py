@@ -53,9 +53,9 @@ class TestSyncMessages:
             {"external_id": "m3", "sender": "friend@mail.com", "content": "hey there"},
         ]
 
-        with patch("app.api.messages.MockGmailConnector") as MockConnector:
+        with patch("app.api.messages.GmailConnector") as MockGmail:
             mock_instance = FakeGmailConnector(fake_messages)
-            MockConnector.return_value = mock_instance
+            MockGmail.return_value = mock_instance
             resp = client.post("/api/v1/messages/sync", headers=auth_headers)
 
         assert resp.status_code == 200
@@ -67,6 +67,7 @@ class TestSyncMessages:
         assert messages[0].priority_score == 10
         assert messages[1].priority_score == 1
         assert messages[2].priority_score == 0
+
 
     def test_sync_duplicate_skipped(self, client, auth_headers, db_session):
         from app.models.models import User, UserConnection
@@ -89,9 +90,9 @@ class TestSyncMessages:
             {"external_id": "m1", "sender": "a@b.com", "content": "hello"},
         ]
 
-        with patch("app.api.messages.MockGmailConnector") as MockConnector:
+        with patch("app.api.messages.GmailConnector") as MockGmail:
             mock_instance = FakeGmailConnector(fake_messages)
-            MockConnector.return_value = mock_instance
+            MockGmail.return_value = mock_instance
             client.post("/api/v1/messages/sync", headers=auth_headers)
             resp2 = client.post("/api/v1/messages/sync", headers=auth_headers)
 
