@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowUp,
   CheckCircle2,
   Inbox,
   Loader2,
+  Search,
   X,
   Send,
 } from "lucide-react";
@@ -56,6 +57,8 @@ export default function InventoryPage() {
   const [draft, setDraft] = useState("");
   const [drafting, setDrafting] = useState(false);
   const [draftDone, setDraftDone] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
 
   useEffect(() => {
     api
@@ -68,6 +71,28 @@ export default function InventoryPage() {
   const critical = messages.filter((m) => m.priority_score >= 9).length;
   const action = messages.filter((m) => m.priority_score >= 7 && m.priority_score <= 8).length;
   const low = messages.filter((m) => m.priority_score < 7).length;
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    messages.forEach((m) => {
+      if (m.category) set.add(m.category.toLowerCase());
+    });
+    return ["all", ...Array.from(set)];
+  }, [messages]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return messages.filter((m) => {
+      const matchesCategory =
+        activeCategory === "all" || m.category?.toLowerCase() === activeCategory;
+      const matchesQuery =
+        !q ||
+        [m.sender, m.subject, m.content, m.platform].some((value) =>
+          (value || "").toLowerCase().includes(q)
+        );
+      return matchesCategory && matchesQuery;
+    });
+  }, [messages, query, activeCategory]);
 
   function openModal(msg: Message) {
     setModalMsg(msg);
@@ -157,13 +182,53 @@ export default function InventoryPage() {
 
       {/* ── Messages ── */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-base font-semibold text-[var(--foreground)]">
             All Messages
             <span className="ml-2 text-xs font-normal text-[var(--muted-foreground)]">
-              {messages.length}
+              {filtered.length} of {messages.length}
             </span>
           </h2>
+          <div className="relative sm:w-64">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]"
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search messages…"
+              className="w-full rounded-lg border pl-9 pr-3 py-2 text-sm bg-transparent text-[var(--foreground)] focus:outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.08)" }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+            />
+          </div>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {categories.map((cat) => {
+            const active = activeCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors"
+                style={
+                  active
+                    ? { background: "rgba(45,212,191,0.15)", color: "#2dd4bf" }
+                    : {
+                        background: "rgba(255,255,255,0.04)",
+                        color: "var(--muted-foreground)",
+                      }
+                }
+              >
+                {cat === "all" ? "All" : cat}
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
@@ -193,19 +258,21 @@ export default function InventoryPage() {
           >
             <p className="text-sm text-red-400">{error}</p>
           </div>
-        ) : messages.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div
             className="rounded-xl border border-dashed flex flex-col items-center justify-center py-20 text-center"
             style={{ borderColor: "rgba(255,255,255,0.08)" }}
           >
             <Inbox size={32} className="text-[var(--muted-foreground)] mb-3 opacity-50" />
             <p className="text-sm text-[var(--muted-foreground)]">
-              No messages yet. Connect Gmail and sync to get started.
+              {messages.length === 0
+                ? "No messages yet. Connect Gmail and sync to get started."
+                : "No messages match your search or filter."}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {[...messages]
+            {[...filtered]
               .sort((a, b) => b.priority_score - a.priority_score)
               .map((msg) => {
                 const priorityColor =

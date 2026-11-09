@@ -54,14 +54,18 @@ const TYPE_BG: Record<string, string> = {
   holiday: "rgba(16,185,129,0.12)",
 };
 
-function formatDateHeading(dateKey: string): string {
-  const date = new Date(`${dateKey}T00:00:00`);
-  return date.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
+function formatEventDate(value: string): string {
+  return new Date(value).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
     day: "numeric",
-    year: "numeric",
   });
+}
+
+interface EventBucket {
+  key: string;
+  label: string;
+  events: CalendarEvent[];
 }
 
 function formatTime(value: string): string {
@@ -80,6 +84,12 @@ export default function CalendarPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+  const [todayStart, setTodayStart] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    setTodayStart(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  }, []);
 
   const showToast = useCallback((msg: string, type: "ok" | "err") => {
     setToast({ msg, type });
@@ -103,15 +113,41 @@ export default function CalendarPage() {
     loadEvents();
   }, [loadEvents]);
 
-  const grouped = useMemo(() => {
-    const groups: Record<string, CalendarEvent[]> = {};
+  const buckets = useMemo<EventBucket[]>(() => {
+    if (!todayStart) return [];
+    const startOfToday = todayStart;
+    const startOfTomorrow = new Date(startOfToday);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const startOfDayAfter = new Date(startOfToday);
+    startOfDayAfter.setDate(startOfDayAfter.getDate() + 2);
+
+    const today: CalendarEvent[] = [];
+    const tomorrow: CalendarEvent[] = [];
+    const upcoming: CalendarEvent[] = [];
+    const past: CalendarEvent[] = [];
+
     for (const event of events) {
-      const key = event.start_time.slice(0, 10);
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(event);
+      const start = new Date(event.start_time);
+      if (start < startOfToday) past.push(event);
+      else if (start < startOfTomorrow) today.push(event);
+      else if (start < startOfDayAfter) tomorrow.push(event);
+      else upcoming.push(event);
     }
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [events]);
+
+    const byStart = (a: CalendarEvent, b: CalendarEvent) =>
+      a.start_time.localeCompare(b.start_time);
+    today.sort(byStart);
+    tomorrow.sort(byStart);
+    upcoming.sort(byStart);
+    past.sort(byStart);
+
+    return [
+      { key: "today", label: "Today", events: today },
+      { key: "tomorrow", label: "Tomorrow", events: tomorrow },
+      { key: "upcoming", label: "Upcoming", events: upcoming },
+      { key: "past", label: "Past", events: past },
+    ].filter((bucket) => bucket.events.length > 0);
+  }, [events, todayStart]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -214,7 +250,7 @@ export default function CalendarPage() {
             Retry
           </button>
         </div>
-      ) : grouped.length === 0 ? (
+      ) : buckets.length === 0 ? (
         <div
           className="rounded-xl border border-dashed flex flex-col items-center justify-center py-20 text-center"
           style={{ borderColor: "rgba(255,255,255,0.08)" }}
@@ -225,69 +261,90 @@ export default function CalendarPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {grouped.map(([dateKey, dayEvents]) => (
-            <div key={dateKey}>
-              <h2 className="text-sm font-semibold text-[var(--foreground)] mb-3">
-                {formatDateHeading(dateKey)}
-                <span className="ml-2 text-xs font-normal text-[var(--muted-foreground)]">
-                  {dayEvents.length}
+        <div className="space-y-10">
+          {buckets.map((bucket) => (
+            <div key={bucket.key}>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-sm font-semibold text-[var(--foreground)]">
+                  {bucket.label}
+                </h2>
+                <span
+                  className="text-xs font-mono px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    color: "var(--muted-foreground)",
+                  }}
+                >
+                  {bucket.events.length}
                 </span>
-              </h2>
-              <div className="space-y-3">
-                {dayEvents.map((event) => {
-                  const color = TYPE_COLORS[event.event_type] ?? "#94a3b8";
-                  const bg = TYPE_BG[event.event_type] ?? "rgba(255,255,255,0.05)";
-                  return (
-                    <div
-                      key={event.id}
-                      className="rounded-xl border p-4 flex items-start gap-4"
-                      style={{
-                        background: "rgba(255,255,255,0.03)",
-                        borderColor: "rgba(255,255,255,0.06)",
-                      }}
-                    >
-                      <div
-                        className="w-1 self-stretch rounded-full shrink-0"
-                        style={{ background: color }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-[var(--foreground)]">
-                            {event.title}
-                          </span>
-                          <span
-                            className="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize"
-                            style={{ background: bg, color }}
+              </div>
+
+              <div className="relative pl-6">
+                <div
+                  className="absolute left-[5px] top-1 bottom-1 w-px"
+                  style={{ background: "rgba(255,255,255,0.08)" }}
+                />
+                <div className="space-y-3">
+                  {bucket.events.map((event) => {
+                    const color = TYPE_COLORS[event.event_type] ?? "#94a3b8";
+                    const bg = TYPE_BG[event.event_type] ?? "rgba(255,255,255,0.05)";
+                    return (
+                      <div key={event.id} className="relative">
+                        <span
+                          className="absolute -left-6 top-5 w-3 h-3 rounded-full border-2"
+                          style={{ background: "#0a0a0f", borderColor: color }}
+                        />
+                        <div
+                          className="rounded-xl border p-4 flex items-start gap-4"
+                          style={{
+                            background: "rgba(255,255,255,0.03)",
+                            borderColor: "rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <div
+                            className="w-1 self-stretch rounded-full shrink-0"
+                            style={{ background: color }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-[var(--foreground)]">
+                                {event.title}
+                              </span>
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize"
+                                style={{ background: bg, color }}
+                              >
+                                {event.event_type}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] mt-1">
+                              <Clock size={12} />
+                              {formatEventDate(event.start_time)} ·{" "}
+                              {formatTime(event.start_time)} – {formatTime(event.end_time)}
+                            </div>
+                            {event.description && (
+                              <p className="text-xs text-[var(--muted-foreground)] mt-2 line-clamp-2">
+                                {event.description}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleDelete(event.id)}
+                            disabled={deletingId === event.id}
+                            className="shrink-0 rounded-lg p-2 text-[var(--muted-foreground)] hover:text-red-400 hover:bg-[var(--accent)] transition-colors disabled:opacity-40"
+                            aria-label="Delete event"
                           >
-                            {event.event_type}
-                          </span>
+                            {deletingId === event.id ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={15} />
+                            )}
+                          </button>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] mt-1">
-                          <Clock size={12} />
-                          {formatTime(event.start_time)} – {formatTime(event.end_time)}
-                        </div>
-                        {event.description && (
-                          <p className="text-xs text-[var(--muted-foreground)] mt-2 line-clamp-2">
-                            {event.description}
-                          </p>
-                        )}
                       </div>
-                      <button
-                        onClick={() => handleDelete(event.id)}
-                        disabled={deletingId === event.id}
-                        className="shrink-0 rounded-lg p-2 text-[var(--muted-foreground)] hover:text-red-400 hover:bg-[var(--accent)] transition-colors disabled:opacity-40"
-                        aria-label="Delete event"
-                      >
-                        {deletingId === event.id ? (
-                          <Loader2 size={15} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={15} />
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ))}

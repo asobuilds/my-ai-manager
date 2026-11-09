@@ -12,12 +12,16 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
   MessageCircle,
+  CalendarDays,
   Inbox,
   Briefcase,
+  Megaphone,
+  Package,
   Plug,
   Settings,
   User,
@@ -27,7 +31,10 @@ import { useRouter } from "next/navigation";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: MessageCircle },
+  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
   { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox },
+  { label: "Shop Manager", href: "/dashboard/shop", icon: Package },
+  { label: "Social Media", href: "/dashboard/social", icon: Megaphone },
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase },
   { label: "Integrations", href: "/dashboard/integrations", icon: Plug },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -103,13 +110,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen w-full" style={{ background: "#0a0a0f" }}>
         <Sidebar collapsible="icon" variant="inset" className="border-r border-[var(--border)]">
           <SidebarContentInner />
+          <SidebarRail />
         </Sidebar>
         <main className="flex-1 flex flex-col min-w-0">
           <header
             className="h-14 border-b border-[var(--border)] flex items-center px-4 gap-3 shrink-0"
             style={{ background: "rgba(255,255,255,0.02)" }}
           >
-            <SidebarRail />
+            <SidebarTrigger className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]" />
             <span className="text-xs text-[var(--muted-foreground)] ml-1">
               Aso Data Assistant
             </span>

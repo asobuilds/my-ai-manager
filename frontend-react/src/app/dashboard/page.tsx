@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, ArrowDown, ArrowUp, Inbox } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  ArrowRight,
+  ArrowUp,
+  CalendarDays,
+  CheckCircle2,
+  Inbox,
+  Megaphone,
+  Package,
+  PenLine,
+} from "lucide-react";
 import api from "@/lib/api";
 
 interface Message {
@@ -14,6 +25,41 @@ interface Message {
   category: string;
   status: string;
 }
+
+const quickActions = [
+  {
+    label: "Schedule Meeting",
+    description: "Plan your next event",
+    href: "/dashboard/calendar",
+    icon: CalendarDays,
+    color: "#2dd4bf",
+    bg: "rgba(45,212,191,0.12)",
+  },
+  {
+    label: "Draft Email",
+    description: "Reply with AI assistance",
+    href: "/dashboard/inventory",
+    icon: PenLine,
+    color: "#3b82f6",
+    bg: "rgba(59,130,246,0.12)",
+  },
+  {
+    label: "Check Stock",
+    description: "Review inventory levels",
+    href: "/dashboard/shop",
+    icon: Package,
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.12)",
+  },
+  {
+    label: "Create Post",
+    description: "Generate a promo post",
+    href: "/dashboard/social",
+    icon: Megaphone,
+    color: "#a78bfa",
+    bg: "rgba(167,139,250,0.12)",
+  },
+];
 
 export default function DashboardPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,9 +80,9 @@ export default function DashboardPage() {
   }, []);
 
   const critical = messages.filter((m) => m.priority_score >= 9).length;
-  const action   = messages.filter((m) => m.priority_score >= 7 && m.priority_score <= 8).length;
-  const low      = messages.filter((m) => m.priority_score < 7).length;
-  const recent   = [...messages].sort((a, b) => b.priority_score - a.priority_score).slice(0, 5);
+  const action = messages.filter((m) => m.priority_score >= 7 && m.priority_score <= 8).length;
+  const low = messages.filter((m) => m.priority_score < 7).length;
+  const recent = [...messages].sort((a, b) => b.priority_score - a.priority_score).slice(0, 3);
 
   const kpiCards = [
     {
@@ -76,7 +122,7 @@ export default function DashboardPage() {
           Good {greeting}, ready to get things done?
         </h1>
         <p className="text-sm text-[var(--muted-foreground)] mt-1">
-          Here&apos;s what Aso found across your connected accounts.
+          Here&apos;s a high-level overview of what Aso found across your accounts.
         </p>
       </div>
 
@@ -86,10 +132,7 @@ export default function DashboardPage() {
           <div
             key={k.label}
             className="rounded-xl p-5 border"
-            style={{
-              background: k.bg,
-              borderColor: k.border,
-            }}
+            style={{ background: k.bg, borderColor: k.border }}
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -100,10 +143,7 @@ export default function DashboardPage() {
             {loading ? (
               <div className="h-9 w-12 rounded bg-[var(--muted)] animate-pulse" />
             ) : (
-              <p
-                className="text-4xl font-bold leading-none"
-                style={{ color: k.color }}
-              >
+              <p className="text-4xl font-bold leading-none" style={{ color: k.color }}>
                 {k.value}
               </p>
             )}
@@ -112,22 +152,53 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ── Recent Messages ── */}
+      {/* ── Quick Actions ── */}
+      <div>
+        <h2 className="text-base font-semibold text-[var(--foreground)] mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="group rounded-xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                borderColor: "rgba(255,255,255,0.06)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                style={{ background: item.bg }}
+              >
+                <item.icon size={18} style={{ color: item.color }} />
+              </div>
+              <p className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1">
+                {item.label}
+                <ArrowRight
+                  size={13}
+                  className="opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0"
+                  style={{ color: item.color }}
+                />
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">{item.description}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Recent Activity ── */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[var(--foreground)]">Recent Messages</h2>
-          <a href="/dashboard/inventory" className="text-xs text-[var(--primary)] hover:opacity-80">
+          <h2 className="text-base font-semibold text-[var(--foreground)]">Recent Activity</h2>
+          <Link href="/dashboard/inventory" className="text-xs text-[var(--primary)] hover:opacity-80">
             View all
-          </a>
+          </Link>
         </div>
 
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-16 rounded-xl bg-[var(--muted)] animate-pulse"
-              />
+              <div key={i} className="h-16 rounded-xl bg-[var(--muted)] animate-pulse" />
             ))}
           </div>
         ) : recent.length === 0 ? (
@@ -137,19 +208,20 @@ export default function DashboardPage() {
           >
             <Inbox size={32} className="text-[var(--muted-foreground)] mb-3" />
             <p className="text-sm text-[var(--muted-foreground)]">
-              No messages yet. Connect Gmail and sync to get started.
+              No activity yet. Connect Gmail and sync to get started.
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             {recent.map((msg) => (
-              <div
+              <Link
                 key={msg.id}
-                className="rounded-xl border p-4 flex items-center gap-4 hover:bg-[var(--accent)] transition-colors cursor-pointer"
+                href="/dashboard/inventory"
+                className="rounded-xl border p-4 flex items-center gap-4 hover:bg-[var(--accent)] transition-colors"
                 style={{ borderColor: "rgba(255,255,255,0.06)" }}
               >
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-sm shrink-0"
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
                   style={{
                     background:
                       msg.priority_score >= 9
@@ -181,14 +253,8 @@ export default function DashboardPage() {
                     {msg.subject || "(no subject)"}
                   </p>
                 </div>
-                <a
-                  href="/dashboard/inventory"
-                  className="text-xs px-3 py-1.5 rounded-lg border shrink-0 hover:bg-[var(--accent)] transition-colors"
-                  style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--muted-foreground)" }}
-                >
-                  View
-                </a>
-              </div>
+                <ArrowRight size={14} className="shrink-0 text-[var(--muted-foreground)]" />
+              </Link>
             ))}
           </div>
         )}
