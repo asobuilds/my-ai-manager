@@ -21,9 +21,9 @@ interface PasswordForm {
 const EMPTY_PASSWORD_FORM: PasswordForm = { current: "", next: "", confirm: "" };
 
 export default function SettingsPage() {
-  const { theme, accentColor, setTheme, setAccentColor } = useTheme();
+  const { theme, color, setTheme, setColor } = useTheme();
   const darkMode = theme === "dark";
-  const currentAccentColorObj = ACCENT_OPTIONS.find((o) => o.value === accentColor) || ACCENT_OPTIONS[0];
+  const currentAccentColorObj = ACCENT_OPTIONS.find((o) => o.value === color) || ACCENT_OPTIONS[0];
 
   const [passwordForm, setPasswordForm] = useState<PasswordForm>(EMPTY_PASSWORD_FORM);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
@@ -214,8 +214,8 @@ export default function SettingsPage() {
                 style={{ background: currentAccentColorObj.color, borderColor: "rgba(255,255,255,0.2)" }}
               />
               <select
-                value={accentColor}
-                onChange={(e) => setAccentColor(e.target.value as AccentColor)}
+                value={color}
+                onChange={(e) => setColor(e.target.value as AccentColor)}
                 className="rounded-lg border px-3 py-2 text-sm bg-transparent focus:outline-none"
                 style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
               >

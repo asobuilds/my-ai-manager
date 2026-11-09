@@ -53,17 +53,14 @@ function SidebarContentInner() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center gap-3 px-4 py-5 border-b border-[var(--border)]">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
-          style={{ background: "linear-gradient(135deg, #2dd4bf, #a78bfa)" }}
-        >
+      <SidebarHeader className="flex items-center gap-3 px-4 py-5 border-b border-border">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 bg-primary text-primary-foreground font-bold">
           🤖
         </div>
         {state !== "collapsed" && (
           <div>
-            <p className="text-sm font-bold text-[var(--foreground)] leading-none">Aso</p>
-            <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5 leading-none">Data Assistant</p>
+            <p className="text-sm font-bold text-foreground leading-none">Aso</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">Data Assistant</p>
           </div>
         )}
       </SidebarHeader>
@@ -74,12 +71,16 @@ function SidebarContentInner() {
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
-            const btnStyle = active
-              ? { background: "rgba(45,212,191,0.12)", color: "#2dd4bf" }
-              : undefined;
             return (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton tooltip={item.label} style={btnStyle}>
+                <SidebarMenuButton
+                  tooltip={item.label}
+                  className={
+                    active
+                      ? "bg-primary/15 text-primary font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }
+                >
                   <Link href={item.href} className="flex items-center gap-3 w-full">
                     <item.icon size={16} />
                     <span>{item.label}</span>
@@ -91,10 +92,10 @@ function SidebarContentInner() {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-[var(--border)] p-3">
+      <SidebarFooter className="border-t border-border p-3">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
         >
           <LogOut size={16} />
           {state !== "collapsed" && <span>Log Out</span>}
@@ -107,22 +108,19 @@ function SidebarContentInner() {
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full" style={{ background: "#0a0a0f" }}>
-        <Sidebar collapsible="icon" variant="inset" className="border-r border-[var(--border)]">
+      <div className="flex min-h-screen w-full bg-background text-foreground">
+        <Sidebar collapsible="icon" variant="inset" className="border-r border-border bg-muted/30">
           <SidebarContentInner />
           <SidebarRail />
         </Sidebar>
-        <main className="flex-1 flex flex-col min-w-0">
-          <header
-            className="h-14 border-b border-[var(--border)] flex items-center px-4 gap-3 shrink-0"
-            style={{ background: "rgba(255,255,255,0.02)" }}
-          >
-            <SidebarTrigger className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]" />
-            <span className="text-xs text-[var(--muted-foreground)] ml-1">
+        <main className="flex-1 flex flex-col min-w-0 bg-background text-foreground">
+          <header className="h-14 border-b border-border flex items-center px-4 gap-3 shrink-0 bg-muted/20">
+            <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+            <span className="text-xs text-muted-foreground ml-1">
               Aso Data Assistant
             </span>
           </header>
-          <div className="flex-1 overflow-auto p-6">{children}</div>
+          <div className="flex-1 overflow-auto p-6 bg-background text-foreground">{children}</div>
         </main>
       </div>
     </SidebarProvider>
