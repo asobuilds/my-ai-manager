@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check, Lock, Moon, Palette, X } from "lucide-react";
+import { useTheme, AccentColor } from "@/contexts/ThemeContext";
 
-const ACCENT_OPTIONS = [
-  { label: "Teal", value: "#2dd4bf" },
-  { label: "Blue", value: "#3b82f6" },
-  { label: "Purple", value: "#a78bfa" },
-  { label: "Amber", value: "#f59e0b" },
-  { label: "Rose", value: "#f43f5e" },
+const ACCENT_OPTIONS: { label: string; value: AccentColor; color: string }[] = [
+  { label: "Teal", value: "teal", color: "#2dd4bf" },
+  { label: "Blue", value: "blue", color: "#3b82f6" },
+  { label: "Purple", value: "purple", color: "#a78bfa" },
+  { label: "Amber", value: "amber", color: "#f59e0b" },
+  { label: "Rose", value: "rose", color: "#f43f5e" },
 ];
 
 interface PasswordForm {
@@ -20,19 +21,12 @@ interface PasswordForm {
 const EMPTY_PASSWORD_FORM: PasswordForm = { current: "", next: "", confirm: "" };
 
 export default function SettingsPage() {
+  const { theme, accentColor, setAccentColor, toggleTheme } = useTheme();
+  const darkMode = theme === "dark";
+  const currentAccentColorObj = ACCENT_OPTIONS.find((o) => o.value === accentColor) || ACCENT_OPTIONS[0];
+
   const [passwordForm, setPasswordForm] = useState<PasswordForm>(EMPTY_PASSWORD_FORM);
-  const [darkMode, setDarkMode] = useState(true);
-  const [accent, setAccent] = useState("#2dd4bf");
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty("--primary", accent);
-    document.documentElement.style.setProperty("--ring", accent);
-  }, [accent]);
 
   function showToast(msg: string, type: "ok" | "err") {
     setToast({ msg, type });
@@ -192,12 +186,12 @@ export default function SettingsPage() {
               type="button"
               role="switch"
               aria-checked={darkMode}
-              onClick={() => setDarkMode((prev) => !prev)}
+              onClick={toggleTheme}
               className="relative w-11 h-6 rounded-full transition-colors shrink-0"
-              style={{ background: darkMode ? "#2dd4bf" : "rgba(255,255,255,0.15)" }}
+              style={{ background: darkMode ? "var(--primary)" : "rgba(15,23,42,0.2)" }}
             >
               <span
-                className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-sm"
                 style={{ left: darkMode ? "22px" : "2px" }}
               />
             </button>
@@ -216,17 +210,17 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center gap-2">
               <span
-                className="w-4 h-4 rounded-full border"
-                style={{ background: accent, borderColor: "rgba(255,255,255,0.2)" }}
+                className="w-4 h-4 rounded-full border shadow-sm"
+                style={{ background: currentAccentColorObj.color, borderColor: "rgba(255,255,255,0.2)" }}
               />
               <select
-                value={accent}
-                onChange={(e) => setAccent(e.target.value)}
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value as AccentColor)}
                 className="rounded-lg border px-3 py-2 text-sm bg-transparent focus:outline-none"
                 style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
               >
                 {ACCENT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value} style={{ background: "#1a1a2e" }}>
+                  <option key={option.value} value={option.value} style={{ background: theme === "dark" ? "#1a1a2e" : "#ffffff", color: theme === "dark" ? "#f0f0f5" : "#0f172a" }}>
                     {option.label}
                   </option>
                 ))}

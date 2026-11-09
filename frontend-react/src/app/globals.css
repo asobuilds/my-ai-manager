@@ -4,8 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── Premium dark theme tokens ─────────────────────────────── */
-:root {
+/* ── Theme tokens (dark is the default) ───────────────────── */
+:root,
+[data-theme="dark"] {
   --background: #0a0a0f;
   --foreground: #f0f0f5;
   --card: rgba(255, 255, 255, 0.03);
@@ -33,6 +34,65 @@
   --sidebar-border: rgba(255, 255, 255, 0.06);
   --sidebar-ring: #2dd4bf;
   --radius: 0.625rem;
+  color-scheme: dark;
+}
+
+/* ── Light theme overrides ────────────────────────────────── */
+[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: rgba(15, 23, 42, 0.03);
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --muted: rgba(15, 23, 42, 0.06);
+  --muted-foreground: #64748b;
+  --accent: rgba(15, 23, 42, 0.06);
+  --accent-foreground: #0f172a;
+  --destructive: #dc2626;
+  --border: rgba(15, 23, 42, 0.1);
+  --input: rgba(15, 23, 42, 0.1);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(15, 23, 42, 0.06);
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: rgba(15, 23, 42, 0.1);
+  color-scheme: light;
+}
+
+/* ── Accent palettes (set via data-accent on <html>) ──────── */
+[data-accent="teal"] {
+  --primary: #2dd4bf;
+  --ring: #2dd4bf;
+  --sidebar-primary: #2dd4bf;
+  --sidebar-ring: #2dd4bf;
+}
+[data-accent="blue"] {
+  --primary: #3b82f6;
+  --ring: #3b82f6;
+  --sidebar-primary: #3b82f6;
+  --sidebar-ring: #3b82f6;
+}
+[data-accent="purple"] {
+  --primary: #a78bfa;
+  --ring: #a78bfa;
+  --sidebar-primary: #a78bfa;
+  --sidebar-ring: #a78bfa;
+}
+[data-accent="amber"] {
+  --primary: #f59e0b;
+  --ring: #f59e0b;
+  --sidebar-primary: #f59e0b;
+  --sidebar-ring: #f59e0b;
+}
+[data-accent="rose"] {
+  --primary: #f43f5e;
+  --ring: #f43f5e;
+  --sidebar-primary: #f43f5e;
+  --sidebar-ring: #f43f5e;
 }
 
 body {
