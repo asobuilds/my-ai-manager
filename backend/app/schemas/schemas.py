@@ -201,6 +201,7 @@ class ExplainRequest(BaseModel):
 # ---------- Profile ----------
 
 class ProfileUpdate(BaseModel):
+    full_name: str | None = None
     phone: str | None = None
     location: str | None = None
     bio: str | None = None
