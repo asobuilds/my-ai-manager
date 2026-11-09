@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Inbox,
   Briefcase,
+  Package,
   Plug,
   Settings,
   User,
@@ -14,6 +15,7 @@ import {
 const navItems = [
   { label: "Chat", href: "/dashboard", icon: MessageCircle },
   { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox },
+  { label: "Shop Manager", href: "/dashboard/shop", icon: Package },
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase },
   { label: "Integrations", href: "/dashboard/integrations", icon: Plug },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },

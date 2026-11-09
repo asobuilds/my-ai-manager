@@ -27,6 +27,7 @@ class UserOut(BaseModel):
     id: UUID
     email: EmailStr
     full_name: str | None
+    role: str
     phone: str | None
     location: str | None
     bio: str | None
