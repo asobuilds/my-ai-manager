@@ -21,7 +21,7 @@ interface PasswordForm {
 const EMPTY_PASSWORD_FORM: PasswordForm = { current: "", next: "", confirm: "" };
 
 export default function SettingsPage() {
-  const { theme, accentColor, setAccentColor, toggleTheme } = useTheme();
+  const { theme, accentColor, setTheme, setAccentColor } = useTheme();
   const darkMode = theme === "dark";
   const currentAccentColorObj = ACCENT_OPTIONS.find((o) => o.value === accentColor) || ACCENT_OPTIONS[0];
 
@@ -186,7 +186,7 @@ export default function SettingsPage() {
               type="button"
               role="switch"
               aria-checked={darkMode}
-              onClick={toggleTheme}
+              onClick={() => setTheme(darkMode ? "light" : "dark")}
               className="relative w-11 h-6 rounded-full transition-colors shrink-0"
               style={{ background: darkMode ? "var(--primary)" : "rgba(15,23,42,0.2)" }}
             >
