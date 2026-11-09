@@ -147,7 +147,7 @@ class FileCatalog(Base):
     file_type = Column(String(50), nullable=True)
     size_bytes = Column(BigInteger, nullable=True)
     description = Column(Text, nullable=True)
-    tags = Column(Text, nullable=True)  # JSON array as text
+    _tags = Column("tags", Text, nullable=True)  # JSON array as text
     source = Column(String(50), nullable=True)  # gmail, manual, import
     message_id = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

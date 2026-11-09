@@ -10,20 +10,19 @@ from app.schemas.schemas import LoginRequest, RegisterRequest, TokenResponse, Us
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-class RegisterWithRoleRequest(RegisterRequest):
-    role: str = "staff"  # default new users to staff
-
-
 @router.post("/register", response_model=UserOut)
-def register(body: RegisterWithRoleRequest, db: Session = Depends(get_db)):
+def register(body: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    # The very first account bootstraps the system as owner; everyone after is staff.
+    # Client-supplied roles are intentionally ignored to prevent privilege escalation.
+    role = "owner" if db.query(User).count() == 0 else "staff"
     user = User(
         email=body.email,
         hashed_password=hash_password(body.password),
         full_name=body.full_name,
-        role=body.role,
+        role=role,
     )
     db.add(user)
     db.commit()

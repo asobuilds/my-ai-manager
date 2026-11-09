@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_owner, get_current_user
 from app.models.models import Product, StockMovement, User
 from app.schemas.schemas import (
     ProductCreate,
@@ -37,7 +37,7 @@ def list_products(
 @router.post("/products", response_model=ProductResponse, status_code=201)
 def create_product(
     body: ProductCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Create a new product."""
@@ -59,7 +59,7 @@ def create_product(
 def update_product(
     product_id: UUID,
     body: ProductUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Update a product's details."""
@@ -82,7 +82,7 @@ def update_product(
 def add_stock_movement(
     product_id: UUID,
     body: StockMovementCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
     """Record a stock movement and update the product quantity."""

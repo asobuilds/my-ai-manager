@@ -61,15 +61,15 @@ class TestRBAC:
         resp = client.get("/api/v1/shop/products", headers=staff_headers)
         assert resp.status_code == 200
 
-    def test_staff_can_create_shop_product(self, client: TestClient, auth_headers):
-        """Staff should be able to create products."""
+    def test_staff_cannot_create_shop_product(self, client: TestClient, auth_headers):
+        """Staff should get 403 when creating products (owner-only)."""
         staff_headers = self._create_staff_user(client)
         resp = client.post(
             "/api/v1/shop/products",
             json={"sku": "STAFF-001", "name": "Test Product", "price": 1000},
             headers=staff_headers,
         )
-        assert resp.status_code == 201
+        assert resp.status_code == 403
 
     def test_owner_can_access_shop(self, client: TestClient, auth_headers):
         """Owner should also be able to access shop."""
