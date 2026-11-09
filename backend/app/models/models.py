@@ -30,6 +30,8 @@ class User(Base):
     job_applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
     files = relationship("FileCatalog", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
+    calendar_events = relationship("CalendarEvent", back_populates="user", cascade="all, delete-orphan")
+    social_posts = relationship("SocialPost", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = ()
 
@@ -244,4 +246,44 @@ class StockMovement(Base):
     __table_args__ = (
         Index("ix_stock_movements_product_id", "product_id"),
         Index("ix_stock_movements_created_at", "created_at"),
+    )
+
+
+class CalendarEvent(Base):
+    __tablename__ = "calendar_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    event_type = Column(String(50), default="meeting", nullable=False)  # meeting, reminder, holiday
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="calendar_events")
+
+    __table_args__ = (
+        Index("ix_calendar_events_user_id", "user_id"),
+        Index("ix_calendar_events_start_time", "start_time"),
+    )
+
+
+class SocialPost(Base):
+    __tablename__ = "social_posts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    platform = Column(String(50), nullable=False)  # e.g., "X", "Instagram"
+    content = Column(Text, nullable=False)
+    status = Column(String(30), default="draft", nullable=False)  # draft, scheduled, published
+    scheduled_time = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="social_posts")
+
+    __table_args__ = (
+        Index("ix_social_posts_user_id", "user_id"),
+        Index("ix_social_posts_status", "status"),
     )

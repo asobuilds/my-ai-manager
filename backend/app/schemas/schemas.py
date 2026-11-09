@@ -258,3 +258,62 @@ class StockMovementResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------- Calendar ----------
+
+class CalendarEventCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    start_time: datetime
+    end_time: datetime
+    event_type: str = Field(default="meeting", max_length=50)  # meeting, reminder, holiday
+
+
+class CalendarEventOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    description: str | None
+    start_time: datetime
+    end_time: datetime
+    event_type: str
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Social Media ----------
+
+class SocialPostCreate(BaseModel):
+    platform: str = Field(min_length=1, max_length=50)
+    content: str = Field(min_length=1)
+    status: str = Field(default="draft", pattern="^(draft|scheduled|published)$")
+    scheduled_time: datetime | None = None
+
+
+class SocialPostUpdate(BaseModel):
+    platform: str | None = Field(default=None, min_length=1, max_length=50)
+    content: str | None = Field(default=None, min_length=1)
+    status: str | None = Field(default=None, pattern="^(draft|scheduled|published)$")
+    scheduled_time: datetime | None = None
+
+
+class SocialPostOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    platform: str
+    content: str
+    status: str
+    scheduled_time: datetime | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SocialGenerateRequest(BaseModel):
+    product_name: str = Field(min_length=1, max_length=255)
+    platform: str = Field(min_length=1, max_length=50)

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   MessageCircle,
+  CalendarDays,
   Inbox,
   Briefcase,
   Package,
@@ -14,6 +15,7 @@ import {
 
 const navItems = [
   { label: "Chat", href: "/dashboard", icon: MessageCircle },
+  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
   { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox },
   { label: "Shop Manager", href: "/dashboard/shop", icon: Package },
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase },
