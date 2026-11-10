@@ -19,13 +19,17 @@ export default function LoginPage() {
       const resp = await api.post("/auth/login", { email, password });
       localStorage.setItem("access_token", resp.data.access_token);
       window.location.href = "/dashboard";
-    } catch (err: unknown) {
-      let detail: string | null = null;
-      const e = err as { response?: { data?: { detail?: string } } };
-      if (e.response?.data?.detail != null) {
-        detail = e.response.data.detail;
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        // FastAPI validation error array
+        setError(detail.map((d: any) => d.msg || "Validation error").join(", "));
+      } else if (typeof detail === "string") {
+        // Standard string error
+        setError(detail);
+      } else {
+        setError("Invalid email or password.");
       }
-      setError(detail ?? "Invalid email or password.");
     } finally {
       setLoading(false);
     }
