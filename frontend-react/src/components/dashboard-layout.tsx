@@ -28,14 +28,15 @@ import {
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { usePreferences } from "@/contexts/PreferenceContext";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: MessageCircle },
-  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
-  { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox },
-  { label: "Shop Manager", href: "/dashboard/shop", icon: Package },
-  { label: "Social Media", href: "/dashboard/social", icon: Megaphone },
-  { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase },
+  { label: "Dashboard", href: "/dashboard", icon: MessageCircle, feature: "dashboard" },
+  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, feature: "calendar" },
+  { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox, feature: "inventory" },
+  { label: "Shop Manager", href: "/dashboard/shop", icon: Package, feature: "shop" },
+  { label: "Social Media", href: "/dashboard/social", icon: Megaphone, feature: "social" },
+  { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase, feature: "jobs" },
   { label: "Integrations", href: "/dashboard/integrations", icon: Plug },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Profile", href: "/dashboard/profile", icon: User },
@@ -45,6 +46,11 @@ function SidebarContentInner() {
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useSidebar();
+  const { enabled_features } = usePreferences();
+
+  const visibleItems = navItems.filter(
+    (item) => !item.feature || enabled_features.includes(item.feature)
+  );
 
   function handleLogout() {
     localStorage.removeItem("access_token");
@@ -67,7 +73,7 @@ function SidebarContentInner() {
 
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));

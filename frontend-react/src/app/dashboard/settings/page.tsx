@@ -1,16 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Lock, Moon, Palette, X } from "lucide-react";
-import { useTheme, AccentColor } from "@/contexts/ThemeContext";
-
-const ACCENT_OPTIONS: { label: string; value: AccentColor; color: string }[] = [
-  { label: "Teal", value: "teal", color: "#2dd4bf" },
-  { label: "Blue", value: "blue", color: "#3b82f6" },
-  { label: "Purple", value: "purple", color: "#a78bfa" },
-  { label: "Amber", value: "amber", color: "#f59e0b" },
-  { label: "Rose", value: "rose", color: "#f43f5e" },
-];
+import { Check, Lock, Moon, Palette, X, Plus, Minus } from "lucide-react";
+import { usePreferences, Palette as PaletteType } from "@/contexts/PreferenceContext";
 
 interface PasswordForm {
   current: string;
@@ -21,9 +13,34 @@ interface PasswordForm {
 const EMPTY_PASSWORD_FORM: PasswordForm = { current: "", next: "", confirm: "" };
 
 export default function SettingsPage() {
-  const { theme, color, setTheme, setColor } = useTheme();
-  const darkMode = theme === "dark";
-  const currentAccentColorObj = ACCENT_OPTIONS.find((o) => o.value === color) || ACCENT_OPTIONS[0];
+  const {
+    themeMode,
+    palette,
+    fontSize,
+    setThemeMode,
+    setPalette,
+    setFontSize,
+    enabled_features,
+    setEnabledFeatures,
+    loading: prefsLoading,
+  } = usePreferences();
+
+  const FEATURES = [
+    { label: "Dashboard", value: "dashboard" },
+    { label: "Calendar", value: "calendar" },
+    { label: "Shop Manager", value: "shop" },
+    { label: "Social Media", value: "social" },
+    { label: "Job Tracker", value: "jobs" },
+    { label: "Data Inventory", value: "inventory" },
+  ];
+
+  function toggleFeature(value: string) {
+    if (prefsLoading) return;
+    const next = enabled_features.includes(value)
+      ? enabled_features.filter((f) => f !== value)
+      : [...enabled_features, value];
+    setEnabledFeatures(next);
+  }
 
   const [passwordForm, setPasswordForm] = useState<PasswordForm>(EMPTY_PASSWORD_FORM);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
@@ -168,65 +185,150 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-[var(--foreground)]">Appearance</h2>
           </div>
           <p className="text-xs text-[var(--muted-foreground)] mb-5">
-            Personalize how your workspace looks. These preferences are preview-only for now.
+            Personalize your workspace theme, palette, and font size.
           </p>
 
-          {/* Dark mode toggle */}
+          {/* Theme Mode toggle */}
           <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-3">
               <Moon size={16} className="text-[var(--muted-foreground)]" />
               <div>
-                <p className="text-sm font-medium text-[var(--foreground)]">Dark Mode</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">Theme Mode</p>
                 <p className="text-xs text-[var(--muted-foreground)]">
-                  Use the dark theme across the dashboard
+                  Choose light, dark, or system mode
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={darkMode}
-              onClick={() => setTheme(darkMode ? "light" : "dark")}
-              className="relative w-11 h-6 rounded-full transition-colors shrink-0"
-              style={{ background: darkMode ? "var(--primary)" : "rgba(15,23,42,0.2)" }}
-            >
-              <span
-                className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-sm"
-                style={{ left: darkMode ? "22px" : "2px" }}
-              />
-            </button>
+            <div className="flex items-center gap-1.5 bg-[var(--muted)] p-1 rounded-xl">
+              {(["light", "dark", "system"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setThemeMode(mode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                    themeMode === mode
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Accent color */}
-          <div className="flex items-center justify-between py-3">
+          {/* Palette / Color dropdown */}
+          <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-3">
               <Palette size={16} className="text-[var(--muted-foreground)]" />
               <div>
-                <p className="text-sm font-medium text-[var(--foreground)]">Theme Accent Color</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">Theme Palette</p>
                 <p className="text-xs text-[var(--muted-foreground)]">
-                  Highlight color used for buttons and active states
+                  Primary accent color for buttons and active states
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span
-                className="w-4 h-4 rounded-full border shadow-sm"
-                style={{ background: currentAccentColorObj.color, borderColor: "rgba(255,255,255,0.2)" }}
-              />
               <select
-                value={color}
-                onChange={(e) => setColor(e.target.value as AccentColor)}
+                value={palette}
+                onChange={(e) => setPalette(e.target.value as PaletteType)}
                 className="rounded-lg border px-3 py-2 text-sm bg-transparent focus:outline-none"
                 style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
               >
-                {ACCENT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value} style={{ background: theme === "dark" ? "#1a1a2e" : "#ffffff", color: theme === "dark" ? "#f0f0f5" : "#0f172a" }}>
+                {[
+                  { label: "Teal", value: "teal" },
+                  { label: "Blue", value: "blue" },
+                  { label: "Purple", value: "purple" },
+                  { label: "Amber", value: "amber" },
+                  { label: "Rose", value: "rose" },
+                ].map((option) => (
+                  <option key={option.value} value={option.value} style={{ background: "#1a1a2e", color: "#f0f0f5" }}>
                     {option.label}
                   </option>
                 ))}
               </select>
             </div>
           </div>
+
+          {/* Font Size selector */}
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-base">🔤</span>
+              <div>
+                <p className="text-sm font-medium text-[var(--foreground)]">Font Size</p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Adjust interface text scale
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 bg-[var(--muted)] p-1 rounded-xl">
+              {(["small", "medium", "large"] as const).map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setFontSize(size)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                    fontSize === size
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── System Features ── */}
+        <section
+          className="rounded-2xl border p-6"
+          style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Plus size={16} style={{ color: "#a78bfa" }} />
+            <h2 className="text-base font-semibold text-[var(--foreground)]">System Features</h2>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)] mb-5">
+            Enable or disable workspace modules. Changes are saved to your account.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {FEATURES.map((feature) => {
+              const enabled = enabled_features.includes(feature.value);
+              return (
+                <label
+                  key={feature.value}
+                  className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors hover:bg-muted/50"
+                  style={{
+                    borderColor: enabled
+                      ? "rgba(45,212,191,0.4)"
+                      : "rgba(255,255,255,0.06)",
+                    background: enabled ? "rgba(45,212,191,0.08)" : "transparent",
+                  }}
+                  onClick={() => toggleFeature(feature.value)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    defaultChecked={enabled}
+                    className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)] bg-transparent"
+                    readOnly
+                  />
+                  {enabled ? (
+                    <Minus size={14} className="text-[var(--primary)] shrink-0" />
+                  ) : (
+                    <Plus size={14} className="text-[var(--muted-foreground)] shrink-0" />
+                  )}
+                  <span className="text-sm text-[var(--foreground)]">{feature.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          {prefsLoading && (
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">
+              Saving…
+            </p>
+          )}
         </section>
       </div>
     </div>
