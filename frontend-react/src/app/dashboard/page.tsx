@@ -33,32 +33,36 @@ const quickActions = [
     description: "Plan your next event",
     href: "/dashboard/calendar",
     icon: CalendarDays,
-    color: "#2dd4bf",
-    bg: "rgba(45,212,191,0.12)",
+    color: "blue",
+    bg: "bg-blue-500/10",
+    iconColor: "text-blue-400",
   },
   {
     label: "Draft Email",
     description: "Reply with AI assistance",
     href: "/dashboard/inventory",
     icon: PenLine,
-    color: "#3b82f6",
-    bg: "rgba(59,130,246,0.12)",
+    color: "cyan",
+    bg: "bg-cyan-500/10",
+    iconColor: "text-cyan-400",
   },
   {
     label: "Check Stock",
     description: "Review inventory levels",
     href: "/dashboard/shop",
     icon: Package,
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,0.12)",
+    color: "emerald",
+    bg: "bg-emerald-500/10",
+    iconColor: "text-emerald-400",
   },
   {
     label: "Create Post",
     description: "Generate a promo post",
     href: "/dashboard/social",
     icon: Megaphone,
-    color: "#a78bfa",
-    bg: "rgba(167,139,250,0.12)",
+    color: "pink",
+    bg: "bg-pink-500/10",
+    iconColor: "text-pink-400",
   },
 ];
 
@@ -164,24 +168,22 @@ export default function DashboardPage() {
             <Link
               key={item.label}
               href={item.href}
-              className="glass-card glass-card-transition group flex items-center gap-3 p-4"
+              className={`glass-card glass-card-transition group flex items-center gap-3 p-4 ${item.bg}`}
               style={{
-                background: "rgba(255,255,255,0.05)",
+                background: "rgba(255,255,255,0.03)",
                 borderColor: "rgba(255,255,255,0.06)",
               }}
             >
               <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                style={{ background: item.bg }}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${item.bg}`}
               >
-                <item.icon size={18} style={{ color: item.color }} />
+                <item.icon size={18} className={item.iconColor} />
               </div>
               <p className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1">
                 {item.label}
                 <ArrowRight
                   size={13}
-                  className="opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0"
-                  style={{ color: item.color }}
+                  className={`opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 ${item.iconColor}`}
                 />
               </p>
               <p className="text-xs text-[var(--muted-foreground)] mt-1">{item.description}</p>

@@ -31,15 +31,15 @@ import { useRouter } from "next/navigation";
 import { usePreferences } from "@/contexts/PreferenceContext";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: MessageCircle, feature: "dashboard" },
-  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, feature: "calendar" },
-  { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox, feature: "inventory" },
-  { label: "Shop Manager", href: "/dashboard/shop", icon: Package, feature: "shop" },
-  { label: "Social Media", href: "/dashboard/social", icon: Megaphone, feature: "social" },
-  { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase, feature: "jobs" },
-  { label: "Integrations", href: "/dashboard/integrations", icon: Plug },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
-  { label: "Profile", href: "/dashboard/profile", icon: User },
+  { label: "Dashboard", href: "/dashboard", icon: MessageCircle, feature: "dashboard", iconColor: "text-blue-400" },
+  { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, feature: "calendar", iconColor: "text-purple-400" },
+  { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox, feature: "inventory", iconColor: "text-cyan-400" },
+  { label: "Shop Manager", href: "/dashboard/shop", icon: Package, feature: "shop", iconColor: "text-emerald-400" },
+  { label: "Social Media", href: "/dashboard/social", icon: Megaphone, feature: "social", iconColor: "text-pink-400" },
+  { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase, feature: "jobs", iconColor: "text-amber-400" },
+  { label: "Integrations", href: "/dashboard/integrations", icon: Plug, iconColor: "text-indigo-400" },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings, iconColor: "text-green-400" },
+  { label: "Profile", href: "/dashboard/profile", icon: User, iconColor: "text-violet-400" },
 ];
 
 function SidebarContentInner() {
@@ -88,7 +88,7 @@ function SidebarContentInner() {
                   }
                 >
                   <Link href={item.href} className="flex items-center gap-3 w-full">
-                    <item.icon size={16} />
+                    <item.icon size={16} className={item.iconColor} />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
