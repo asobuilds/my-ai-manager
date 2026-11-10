@@ -17,7 +17,7 @@ def get_preferences(
     current_user: User = Depends(get_current_owner),
     db: Session = Depends(get_db),
 ):
-    """Get current user's preferences, creating default if missing."""
+    """Get current user's preferences, creating default if missing. Auto-adds 'chat' feature if missing."""
     prefs = db.query(UserPreference).filter(UserPreference.user_id == current_user.id).first()
     if not prefs:
         prefs = UserPreference(
@@ -28,6 +28,10 @@ def get_preferences(
             enabled_features=["chat", "dashboard", "calendar", "shop", "social", "jobs", "inventory", "settings", "profile"],
         )
         db.add(prefs)
+        db.commit()
+        db.refresh(prefs)
+    elif "chat" not in prefs.enabled_features:
+        prefs.enabled_features.append("chat")
         db.commit()
         db.refresh(prefs)
     return prefs

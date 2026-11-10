@@ -29,6 +29,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { BackButton } from "@/components/back-button";
 import { usePreferences } from "@/contexts/PreferenceContext";
 
 const navItems = [
@@ -114,6 +115,9 @@ function SidebarContentInner() {
 }
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const showBackButton = pathname !== "/dashboard";
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -123,6 +127,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <main className="flex-1 flex flex-col min-w-0 bg-background text-foreground">
           <header className="h-14 border-b border-border flex items-center px-4 gap-3 shrink-0 bg-muted/20">
+            {showBackButton && <BackButton />}
             <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
             <span className="text-xs text-muted-foreground ml-1">
               Aso Data Assistant
