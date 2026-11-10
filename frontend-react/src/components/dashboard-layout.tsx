@@ -26,11 +26,13 @@ import {
   Settings,
   User,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePreferences } from "@/contexts/PreferenceContext";
 
 const navItems = [
+  { label: "Chat", href: "/dashboard/chat", icon: MessageSquare, feature: "chat", iconColor: "text-blue-400" },
   { label: "Dashboard", href: "/dashboard", icon: MessageCircle, feature: "dashboard", iconColor: "text-blue-400" },
   { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, feature: "calendar", iconColor: "text-purple-400" },
   { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox, feature: "inventory", iconColor: "text-cyan-400" },

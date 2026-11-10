@@ -51,6 +51,7 @@ export function PreferenceProvider({ children }: { children: React.ReactNode }) 
   const [palette, setPaletteState] = useState<Palette>("teal");
   const [fontSize, setFontSizeState] = useState<FontSize>("medium");
   const [enabledFeatures, setEnabledFeaturesState] = useState<string[]>([
+    "chat",
     "dashboard",
     "calendar",
     "shop",

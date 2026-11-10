@@ -297,7 +297,7 @@ class UserPreference(Base):
     theme_mode = Column(String(50), default="system", nullable=False)
     theme_palette = Column(String(50), default="teal", nullable=False)
     font_size = Column(String(50), default="medium", nullable=False)
-    _enabled_features = Column("enabled_features", Text, default='["dashboard","calendar","shop","social","jobs","inventory","settings","profile"]', nullable=False)
+    _enabled_features = Column("enabled_features", Text, default='["chat","dashboard","calendar","shop","social","jobs","inventory","settings","profile"]', nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -308,7 +308,7 @@ class UserPreference(Base):
         try:
             return json.loads(self._enabled_features)
         except Exception:
-            return ["dashboard","calendar","shop","social","jobs","inventory","settings","profile"]
+            return ["chat","dashboard","calendar","shop","social","jobs","inventory","settings","profile"]
 
     @enabled_features.setter
     def enabled_features(self, value):

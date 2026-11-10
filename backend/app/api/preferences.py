@@ -25,7 +25,7 @@ def get_preferences(
             theme_mode="system",
             theme_palette="teal",
             font_size="medium",
-            enabled_features=["dashboard", "calendar", "shop", "social", "jobs", "inventory", "settings", "profile"],
+            enabled_features=["chat", "dashboard", "calendar", "shop", "social", "jobs", "inventory", "settings", "profile"],
         )
         db.add(prefs)
         db.commit()
@@ -47,7 +47,7 @@ def update_preferences(
             theme_mode="system",
             theme_palette="teal",
             font_size="medium",
-            enabled_features=["dashboard", "calendar", "shop", "social", "jobs", "inventory", "settings", "profile"],
+            enabled_features=["chat", "dashboard", "calendar", "shop", "social", "jobs", "inventory", "settings", "profile"],
         )
         db.add(prefs)
         db.commit()

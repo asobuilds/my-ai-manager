@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_owner
-from app.models.models import CalendarEvent, ChatMessage, Conversation, Message, User
+from app.models.models import CalendarEvent, ChatMessage, Conversation, Message, Product, User
 from app.schemas.schemas import ChatRequest, ExplainRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -132,7 +132,7 @@ async def _call_agnes(payload: dict[str, Any]) -> dict[str, Any]:
 @router.post("")
 @router.post("/")
 async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
-    """Forward the user's message to Agnes AI with inbox context."""
+    """Forward the user's message to Agnes AI with inbox context and user context."""
     unread_messages = (
         db.query(Message)
         .filter(Message.user_id == current_user.id, Message.status == "unread")
@@ -148,6 +148,27 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
             "category": m.category,
         }
         for m in unread_messages
+    ]
+
+    user_context = {
+        "full_name": current_user.full_name,
+        "location": current_user.location,
+        "role": current_user.role,
+    }
+
+    low_stock_products = (
+        db.query(Product)
+        .filter(Product.user_id == current_user.id, Product.stock_quantity <= Product.reorder_level)
+        .all()
+    )
+    low_stock_context = [
+        {
+            "name": p.name,
+            "sku": p.sku,
+            "current_stock": p.stock_quantity,
+            "reorder_level": p.reorder_level,
+        }
+        for p in low_stock_products
     ]
 
     if not body.conversation_id:
@@ -168,7 +189,10 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
 
     now = datetime.now()
     system_prompt_parts = [
-        "You are Aso, a personal AI assistant. Never identify as Agnes or an LLM. Always refer to yourself as Aso.",
+        "You are Aso, a dedicated personal AI assistant. You are NOT an LLM, you are Aso.",
+        "You have full context of the user's profile, their connected data, and their shop inventory.",
+        "You are authorized to make decisions and take actions on behalf of the user.",
+        f"User: {user_context['full_name'] or 'the user'}, Role: {user_context['role']}, Location: {user_context['location'] or 'unknown'}.",
         (
             "You can manage the user's calendar with the create_calendar_event tool. "
             f"The current local date and time is {now.isoformat(timespec='minutes')}. "
@@ -180,6 +204,14 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
             "calling the tool. After creating an event, confirm it back to the user."
         ),
     ]
+    if user_context["full_name"]:
+        system_prompt_parts.append(f"Known user name: {user_context['full_name']}.")
+    system_prompt_parts.append(
+        f"Current Context:\n"
+        f"- Location: {user_context.get('location') or 'unknown'}\n"
+        f"- Role: {user_context.get('role') or 'unknown'}\n"
+        f"- Low stock items: {json.dumps(low_stock_context, default=str) if low_stock_context else 'None'}"
+    )
     if inbox_context:
         system_prompt_parts.append(
             f"Current unread messages in the user's inbox:\n{json.dumps(inbox_context, default=str)}"
