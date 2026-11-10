@@ -210,11 +210,30 @@ class ChatMessage(Base):
     )
 
 
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    products = relationship("Product", back_populates="supplier", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_suppliers_user_id", "user_id"),
+    )
+
+
 class Product(Base):
     __tablename__ = "products"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    supplier_id = Column(UUID(as_uuid=True), ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True)
     sku = Column(String(100), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
     category = Column(String(100), nullable=True)
@@ -225,6 +244,7 @@ class Product(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     movements = relationship("StockMovement", back_populates="product", cascade="all, delete-orphan")
+    supplier = relationship("Supplier", back_populates="products")
 
     __table_args__ = (
         Index("ix_products_user_id", "user_id"),

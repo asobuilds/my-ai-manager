@@ -1,11 +1,17 @@
 """Shop / Inventory management endpoints."""
 from __future__ import annotations
 
-from uuid import UUID
+import json
+import uuid
+from datetime import datetime
+from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from uuid import UUID
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_owner, get_current_user
 from app.models.models import Product, StockMovement, User
@@ -18,6 +24,24 @@ from app.schemas.schemas import (
 )
 
 router = APIRouter(prefix="/shop", tags=["shop"])
+settings = get_settings()
+
+async def _call_agnes(payload: dict[str, Any]) -> dict[str, Any]:
+    base_url = settings.AGNES_BASE_URL.rstrip("/")
+    url = base_url + "/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {settings.AGNES_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            return resp.json()
+    except (httpx.HTTPStatusError, httpx.HTTPError) as exc:
+        raise HTTPException(status_code=502, detail=f"Agnes AI API error: {exc}")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Agnes AI request failed: {exc}")
 
 
 @router.get("/products", response_model=list[ProductResponse])
@@ -131,3 +155,62 @@ def low_stock_alerts(
         .order_by(Product.stock_quantity.asc())
         .all()
     )
+
+
+@router.post("/reorder/{product_id}", response_model=dict[str, Any])
+async def reorder_product(
+    product_id: UUID,
+    current_user: User = Depends(get_current_owner),
+    db: Session = Depends(get_db),
+):
+    """Generate an AI-powered reorder email draft for a low-stock product."""
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.user_id == current_user.id,
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    supplier = product.supplier
+    if not supplier:
+        raise HTTPException(status_code=400, detail="Product has no supplier assigned")
+
+    now = datetime.now()
+    system_prompt = f"""You are Aso, a dedicated personal AI assistant. Generate a professional reorder email for the supplier.
+
+User Context:
+- Name: {current_user.full_name or 'the user'}
+- Role: {current_user.role}
+- Location: {current_user.location or 'unknown'}
+
+Supplier: {supplier.name}
+Supplier Email: {supplier.email or 'not provided'}
+Supplier Phone: {supplier.phone or 'not provided'}
+
+Product: {product.name}
+SKU: {product.sku}
+Current Stock: {product.stock_quantity}
+Reorder Level: {product.reorder_level}
+Price: ${product.price / 100:.2f}
+
+Generate a professional, concise email draft asking the supplier to restock {product.reorder_level} units of {product.name} (SKU: {product.sku}). The email should be polite, include all necessary details, and be ready to send."""
+    
+    user_prompt = "Please generate the reorder email draft now."
+
+    messages_history = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    payload = {
+        "model": "agnes-2.5-flash",
+        "messages": messages_history,
+    }
+
+    data = await _call_agnes(payload)
+    choices = data.get("choices", [])
+    if not choices:
+        raise HTTPException(status_code=502, detail="No response from Agnes AI")
+
+    response_text = choices[0].get("message", {}).get("content", "")
+    return {"draft": response_text, "supplier_email": supplier.email, "product_name": product.name}

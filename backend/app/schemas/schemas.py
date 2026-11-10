@@ -154,6 +154,27 @@ class JobApplicationOut(BaseModel):
         from_attributes = True
 
 
+# ---------- Suppliers ----------
+
+class SupplierCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    email: EmailStr | None = None
+    phone: str | None = None
+
+
+class SupplierOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    name: str
+    email: str | None
+    phone: str | None
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
 # ---------- File Catalog ----------
 
 class FileCatalogCreate(BaseModel):
