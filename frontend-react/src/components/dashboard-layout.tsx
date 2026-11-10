@@ -83,8 +83,8 @@ function SidebarContentInner() {
                   tooltip={item.label}
                   className={
                     active
-                      ? "bg-primary/15 text-primary font-semibold"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "glass-link-active text-primary font-semibold"
+                      : "glass-link text-muted-foreground"
                   }
                 >
                   <Link href={item.href} className="flex items-center gap-3 w-full">
@@ -101,7 +101,7 @@ function SidebarContentInner() {
       <SidebarFooter className="border-t border-border p-3">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          className="glass-link flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-destructive transition-colors"
         >
           <LogOut size={16} />
           {state !== "collapsed" && <span>Log Out</span>}
@@ -115,7 +115,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full bg-background text-foreground">
-        <Sidebar collapsible="icon" variant="inset" className="border-r border-border bg-muted/30">
+        <Sidebar collapsible="icon" variant="inset" className="border-r sidebar-glass">
           <SidebarContentInner />
           <SidebarRail />
         </Sidebar>

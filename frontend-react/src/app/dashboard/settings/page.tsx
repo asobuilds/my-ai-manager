@@ -96,8 +96,8 @@ export default function SettingsPage() {
       <div className="space-y-6">
         {/* ── Password ── */}
         <section
-          className="rounded-2xl border p-6"
-          style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+          className="glass-card glass-card-transition p-6 border"
+          style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.06)" }}
         >
           <div className="flex items-center gap-2 mb-1">
             <Lock size={16} style={{ color: "#2dd4bf" }} />
@@ -177,8 +177,8 @@ export default function SettingsPage() {
 
         {/* ── Appearance ── */}
         <section
-          className="rounded-2xl border p-6"
-          style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+          className="glass-card glass-card-transition p-6 border"
+          style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.06)" }}
         >
           <div className="flex items-center gap-2 mb-1">
             <Palette size={16} style={{ color: "#a78bfa" }} />
@@ -282,8 +282,8 @@ export default function SettingsPage() {
 
         {/* ── System Features ── */}
         <section
-          className="rounded-2xl border p-6"
-          style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+          className="glass-card glass-card-transition p-6 border"
+          style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.06)" }}
         >
           <div className="flex items-center gap-2 mb-1">
             <Plus size={16} style={{ color: "#a78bfa" }} />
@@ -298,7 +298,7 @@ export default function SettingsPage() {
               return (
                 <label
                   key={feature.value}
-                  className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors hover:bg-muted/50"
+                  className="glass-card-transition flex items-center gap-3 p-3 border cursor-pointer"
                   style={{
                     borderColor: enabled
                       ? "rgba(45,212,191,0.4)"

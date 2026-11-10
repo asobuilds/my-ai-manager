@@ -74,8 +74,7 @@ export function WeatherWidget() {
 
   if (error) {
     return (
-      <div className="rounded-xl border p-4 flex items-center gap-3 text-xs text-[var(--muted-foreground)]"
-        style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+      <div className="glass-card glass-card-transition flex items-center gap-3 text-xs text-[var(--muted-foreground)] p-4"
       >
         Weather unavailable
       </div>
@@ -84,8 +83,7 @@ export function WeatherWidget() {
 
   if (!weather) {
     return (
-      <div className="rounded-xl border p-4 flex items-center gap-3 animate-pulse text-xs text-[var(--muted-foreground)]"
-        style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+      <div className="glass-card glass-card-transition flex items-center gap-3 animate-pulse text-xs text-[var(--muted-foreground)] p-4"
       >
         <Cloud size={20} /> Loading weather…
       </div>
@@ -95,8 +93,7 @@ export function WeatherWidget() {
   const Icon = WEATHER_ICONS[weather.weathercode] || Cloud;
 
   return (
-    <div className="rounded-xl border p-4 flex items-center gap-3"
-      style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.06)" }}
+    <div className="glass-card glass-card-transition flex items-center gap-3 p-4"
     >
       <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
         <Icon size={22} className="text-[var(--primary)]" />

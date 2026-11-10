@@ -189,7 +189,7 @@ export default function ShopPage() {
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div
-          className="rounded-xl p-5 border"
+          className="glass-card glass-card-transition p-5 border"
           style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.2)" }}
         >
           <div className="flex items-center justify-between mb-3">
@@ -211,7 +211,7 @@ export default function ShopPage() {
         </div>
 
         <div
-          className="rounded-xl p-5 border"
+          className="glass-card glass-card-transition p-5 border"
           style={{ background: "rgba(45,212,191,0.08)", borderColor: "rgba(45,212,191,0.2)" }}
         >
           <div className="flex items-center justify-between mb-3">
@@ -231,7 +231,7 @@ export default function ShopPage() {
         </div>
 
         <div
-          className="rounded-xl p-5 border"
+          className="glass-card glass-card-transition p-5 border"
           style={{ background: "rgba(59,130,246,0.08)", borderColor: "rgba(59,130,246,0.2)" }}
         >
           <div className="flex items-center justify-between mb-3">
@@ -268,7 +268,7 @@ export default function ShopPage() {
 
         {loading ? (
           <div
-            className="rounded-xl border overflow-hidden"
+            className="glass-card border overflow-hidden"
             style={{ borderColor: "rgba(255,255,255,0.06)" }}
           >
             {[1, 2, 3, 4, 5].map((i) => (
@@ -287,7 +287,7 @@ export default function ShopPage() {
           </div>
         ) : error ? (
           <div
-            className="rounded-xl border flex flex-col items-center justify-center py-16 text-center gap-3"
+            className="glass-card border flex flex-col items-center justify-center py-16 text-center gap-3"
             style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}
           >
             <p className="text-sm text-red-400">{error}</p>
@@ -301,7 +301,7 @@ export default function ShopPage() {
           </div>
         ) : products.length === 0 ? (
           <div
-            className="rounded-xl border border-dashed flex flex-col items-center justify-center py-20 text-center"
+            className="glass-card border border-dashed flex flex-col items-center justify-center py-20 text-center"
             style={{ borderColor: "rgba(255,255,255,0.08)" }}
           >
             <Package size={32} className="text-[var(--muted-foreground)] mb-3 opacity-50" />
@@ -311,7 +311,7 @@ export default function ShopPage() {
           </div>
         ) : (
           <div
-            className="rounded-xl border overflow-x-auto"
+            className="glass-card border overflow-x-auto"
             style={{ borderColor: "rgba(255,255,255,0.06)" }}
           >
             <table className="w-full text-sm">

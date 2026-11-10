@@ -135,7 +135,7 @@ export default function DashboardPage() {
         {kpiCards.map((k) => (
           <div
             key={k.label}
-            className="rounded-xl p-5 border"
+            className="glass-card glass-card-transition p-5 border"
             style={{ background: k.bg, borderColor: k.border }}
           >
             <div className="flex items-center justify-between mb-3">
@@ -164,9 +164,9 @@ export default function DashboardPage() {
             <Link
               key={item.label}
               href={item.href}
-              className="group rounded-xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              className="glass-card glass-card-transition group flex items-center gap-3 p-4"
               style={{
-                background: "rgba(255,255,255,0.03)",
+                background: "rgba(255,255,255,0.05)",
                 borderColor: "rgba(255,255,255,0.06)",
               }}
             >
