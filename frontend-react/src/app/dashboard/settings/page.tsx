@@ -310,7 +310,6 @@ export default function SettingsPage() {
                   <input
                     type="checkbox"
                     checked={enabled}
-                    defaultChecked={enabled}
                     className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)] bg-transparent"
                     readOnly
                   />

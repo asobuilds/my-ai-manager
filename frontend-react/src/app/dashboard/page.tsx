@@ -14,6 +14,7 @@ import {
   PenLine,
 } from "lucide-react";
 import api from "@/lib/api";
+import { WeatherWidget } from "@/components/weather-widget";
 
 interface Message {
   id: string;
@@ -125,6 +126,9 @@ export default function DashboardPage() {
           Here&apos;s a high-level overview of what Aso found across your accounts.
         </p>
       </div>
+
+      {/* ── Weather ── */}
+      <WeatherWidget />
 
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
