@@ -10,8 +10,18 @@ import {
   Plus,
   RefreshCw,
   X,
+  ShoppingCart,
+  Mail,
+  Building2,
 } from "lucide-react";
 import api from "@/lib/api";
+
+interface Supplier {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
 
 interface Product {
   id: string;
@@ -22,6 +32,7 @@ interface Product {
   price: number;
   stock_quantity: number;
   reorder_level: number;
+  supplier_id: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -33,6 +44,7 @@ interface ProductForm {
   category: string;
   stock_quantity: string;
   reorder_level: string;
+  supplier_id: string;
 }
 
 interface StockForm {
@@ -47,6 +59,7 @@ const EMPTY_PRODUCT_FORM: ProductForm = {
   category: "",
   stock_quantity: "0",
   reorder_level: "5",
+  supplier_id: "",
 };
 
 function formatPrice(cents: number): string {
@@ -56,9 +69,13 @@ function formatPrice(cents: number): string {
 export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [alerts, setAlerts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [supplierForm, setSupplierForm] = useState({ name: "", email: "" });
+  const [submittingSupplier, setSubmittingSupplier] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [productForm, setProductForm] = useState<ProductForm>(EMPTY_PRODUCT_FORM);
@@ -67,6 +84,14 @@ export default function ShopPage() {
   const [stockTarget, setStockTarget] = useState<Product | null>(null);
   const [stockForm, setStockForm] = useState<StockForm>({ movement_type: "in", quantity: "" });
   const [submittingStock, setSubmittingStock] = useState(false);
+
+  // Reorder Modal State
+  const [reorderLoadingId, setReorderLoadingId] = useState<string | null>(null);
+  const [reorderModalData, setReorderModalData] = useState<{
+    productName: string;
+    supplierEmail: string;
+    draft: string;
+  } | null>(null);
 
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
@@ -82,14 +107,16 @@ export default function ShopPage() {
     setLoading(true);
     setError(null);
     try {
-      const [productsRes, alertsRes, meRes] = await Promise.all([
+      const [productsRes, alertsRes, meRes, suppliersRes] = await Promise.all([
         api.get<Product[]>("/shop/products"),
         api.get<Product[]>("/shop/alerts/low-stock"),
         api.get<{ role: string }>("/auth/me"),
+        api.get<Supplier[]>("/suppliers"),
       ]);
       setProducts(productsRes.data);
       setAlerts(alertsRes.data);
       setRole(meRes.data.role);
+      setSuppliers(suppliersRes.data);
     } catch {
       setError("Failed to load inventory. Please try again.");
     } finally {
@@ -100,6 +127,25 @@ export default function ShopPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  async function handleAddSupplier(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supplierForm.name.trim() || !supplierForm.email.trim()) return;
+    setSubmittingSupplier(true);
+    try {
+      const res = await api.post<Supplier>("/suppliers", {
+        name: supplierForm.name.trim(),
+        email: supplierForm.email.trim(),
+      });
+      setSuppliers((prev) => [res.data, ...prev]);
+      setSupplierForm({ name: "", email: "" });
+      showToast("Supplier added successfully", "ok");
+    } catch {
+      showToast("Failed to add supplier", "err");
+    } finally {
+      setSubmittingSupplier(false);
+    }
+  }
 
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
@@ -113,6 +159,7 @@ export default function ShopPage() {
         category: productForm.category.trim() || null,
         stock_quantity: Number(productForm.stock_quantity) || 0,
         reorder_level: Number(productForm.reorder_level) || 0,
+        supplier_id: productForm.supplier_id ? productForm.supplier_id : null,
       });
       setShowAddModal(false);
       setProductForm(EMPTY_PRODUCT_FORM);
@@ -146,6 +193,26 @@ export default function ShopPage() {
       showToast(detail || "Failed to update stock", "err");
     } finally {
       setSubmittingStock(false);
+    }
+  }
+
+  async function handleReorder(product: Product) {
+    setReorderLoadingId(product.id);
+    try {
+      const res = await api.post<{ draft: string; supplier_email: string; product_name: string }>(
+        `/shop/reorder/${product.id}`
+      );
+      setReorderModalData({
+        productName: res.data.product_name || product.name,
+        supplierEmail: res.data.supplier_email || "No supplier email",
+        draft: res.data.draft || "",
+      });
+    } catch (err) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showToast(detail || "Failed to generate reorder draft", "err");
+    } finally {
+      setReorderLoadingId(null);
     }
   }
 
@@ -183,6 +250,51 @@ export default function ShopPage() {
         >
           {toast.type === "ok" ? <Check size={14} /> : <X size={14} />}
           {toast.msg}
+        </div>
+      )}
+
+      {/* ── Add Supplier Form (if suppliers list is empty) ── */}
+      {!loading && suppliers.length === 0 && canModify && (
+        <div
+          className="glass-card border p-6 mb-8 rounded-2xl"
+          style={{ background: "rgba(45,212,191,0.04)", borderColor: "rgba(45,212,191,0.2)" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 size={18} style={{ color: "#2dd4bf" }} />
+            <h2 className="text-base font-semibold text-[var(--foreground)]">Add Your First Supplier</h2>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)] mb-4">
+            You need at least one supplier before assigning them to products for automated reordering.
+          </p>
+          <form onSubmit={handleAddSupplier} className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Supplier Name (e.g. FreshProduce Co)"
+              value={supplierForm.name}
+              onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+              className="flex-1 rounded-xl border px-4 py-2 text-sm bg-transparent focus:outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+              required
+            />
+            <input
+              type="email"
+              placeholder="Supplier Email (e.g. orders@freshproduce.com)"
+              value={supplierForm.email}
+              onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+              className="flex-1 rounded-xl border px-4 py-2 text-sm bg-transparent focus:outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+              required
+            />
+            <button
+              type="submit"
+              disabled={submittingSupplier}
+              className="px-5 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 shrink-0 flex items-center justify-center gap-2"
+              style={{ background: "#2dd4bf" }}
+            >
+              {submittingSupplier && <Loader2 size={14} className="animate-spin" />}
+              Save Supplier
+            </button>
+          </form>
         </div>
       )}
 
@@ -331,6 +443,7 @@ export default function ShopPage() {
               <tbody>
                 {products.map((product) => {
                   const low = product.stock_quantity <= product.reorder_level;
+                  const isReordering = reorderLoadingId === product.id;
                   return (
                     <tr
                       key={product.id}
@@ -377,16 +490,38 @@ export default function ShopPage() {
                       </td>
                       {canModify && (
                         <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={() => {
-                              setStockTarget(product);
-                              setStockForm({ movement_type: "in", quantity: "" });
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-[var(--accent)]"
-                            style={{ borderColor: "rgba(45,212,191,0.3)", color: "#2dd4bf" }}
-                          >
-                            Update Stock
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            {low && (
+                              <button
+                                onClick={() => handleReorder(product)}
+                                disabled={isReordering}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:opacity-90"
+                                style={{
+                                  borderColor: "rgba(245,158,11,0.4)",
+                                  background: "rgba(245,158,11,0.15)",
+                                  color: "#f59e0b",
+                                }}
+                                title="AI Reorder Draft"
+                              >
+                                {isReordering ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  <ShoppingCart size={12} />
+                                )}
+                                Reorder
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setStockTarget(product);
+                                setStockForm({ movement_type: "in", quantity: "" });
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-[var(--accent)]"
+                              style={{ borderColor: "rgba(45,212,191,0.3)", color: "#2dd4bf" }}
+                            >
+                              Update Stock
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -439,8 +574,6 @@ export default function ShopPage() {
                   placeholder="e.g. Wireless Mouse"
                   className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                   style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                   required
                 />
               </div>
@@ -457,8 +590,6 @@ export default function ShopPage() {
                     placeholder="WM-001"
                     className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                     style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                     required
                   />
                 </div>
@@ -475,8 +606,6 @@ export default function ShopPage() {
                     placeholder="19.99"
                     className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                     style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                     required
                   />
                 </div>
@@ -493,9 +622,28 @@ export default function ShopPage() {
                   placeholder="e.g. Electronics"
                   className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                   style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                 />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                  Supplier
+                </label>
+                <select
+                  value={productForm.supplier_id}
+                  onChange={(e) => setProductForm({ ...productForm, supplier_id: e.target.value })}
+                  className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+                  style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                >
+                  <option value="" style={{ background: "#1a1a2e", color: "#fff" }}>
+                    -- Select Supplier --
+                  </option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id} style={{ background: "#1a1a2e", color: "#fff" }}>
+                      {s.name} ({s.email || "no email"})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -507,13 +655,9 @@ export default function ShopPage() {
                     type="number"
                     min="0"
                     value={productForm.stock_quantity}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, stock_quantity: e.target.value })
-                    }
+                    onChange={(e) => setProductForm({ ...productForm, stock_quantity: e.target.value })}
                     className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                     style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                   />
                 </div>
                 <div>
@@ -524,45 +668,30 @@ export default function ShopPage() {
                     type="number"
                     min="0"
                     value={productForm.reorder_level}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, reorder_level: e.target.value })
-                    }
+                    onChange={(e) => setProductForm({ ...productForm, reorder_level: e.target.value })}
                     className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                     style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                   />
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-[var(--accent)]"
-                  style={{ borderColor: "rgba(255,255,255,0.1)", color: "var(--muted-foreground)" }}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={
-                    submittingProduct ||
-                    !productForm.name.trim() ||
-                    !productForm.sku.trim() ||
-                    !productForm.price.trim()
-                  }
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-all disabled:opacity-40 hover:opacity-90"
+                  disabled={submittingProduct}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 flex items-center gap-2"
                   style={{ background: "linear-gradient(135deg, #2dd4bf, #3b82f6)" }}
                 >
-                  {submittingProduct ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      Adding…
-                    </span>
-                  ) : (
-                    "Add Product"
-                  )}
+                  {submittingProduct && <Loader2 size={14} className="animate-spin" />}
+                  Save Product
                 </button>
               </div>
             </form>
@@ -590,12 +719,9 @@ export default function ShopPage() {
               className="flex items-center justify-between px-6 py-4 border-b"
               style={{ borderColor: "rgba(255,255,255,0.06)" }}
             >
-              <div>
-                <h2 className="text-base font-semibold text-[var(--foreground)]">Update Stock</h2>
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                  {stockTarget.name} · current {stockTarget.stock_quantity}
-                </p>
-              </div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]">
+                📦 Update Stock: {stockTarget.name}
+              </h2>
               <button
                 onClick={() => setStockTarget(null)}
                 className="rounded-lg p-1.5 hover:bg-[var(--accent)] transition-colors text-[var(--muted-foreground)]"
@@ -609,24 +735,44 @@ export default function ShopPage() {
                 <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
                   Movement Type
                 </label>
-                <select
-                  value={stockForm.movement_type}
-                  onChange={(e) =>
-                    setStockForm({
-                      ...stockForm,
-                      movement_type: e.target.value as "in" | "out",
-                    })
-                  }
-                  className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
-                  style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                >
-                  <option value="in" style={{ background: "#1a1a2e" }}>
-                    Stock In (restock)
-                  </option>
-                  <option value="out" style={{ background: "#1a1a2e" }}>
-                    Stock Out (sale / usage)
-                  </option>
-                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStockForm({ ...stockForm, movement_type: "in" })}
+                    className="py-2 rounded-xl text-xs font-medium border transition-colors"
+                    style={{
+                      borderColor:
+                        stockForm.movement_type === "in"
+                          ? "rgba(16,185,129,0.5)"
+                          : "rgba(255,255,255,0.08)",
+                      background:
+                        stockForm.movement_type === "in"
+                          ? "rgba(16,185,129,0.15)"
+                          : "transparent",
+                      color: stockForm.movement_type === "in" ? "#34d399" : "var(--muted-foreground)",
+                    }}
+                  >
+                    Stock In (+)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockForm({ ...stockForm, movement_type: "out" })}
+                    className="py-2 rounded-xl text-xs font-medium border transition-colors"
+                    style={{
+                      borderColor:
+                        stockForm.movement_type === "out"
+                          ? "rgba(239,68,68,0.5)"
+                          : "rgba(255,255,255,0.08)",
+                      background:
+                        stockForm.movement_type === "out"
+                          ? "rgba(239,68,68,0.15)"
+                          : "transparent",
+                      color: stockForm.movement_type === "out" ? "#f87171" : "var(--muted-foreground)",
+                    }}
+                  >
+                    Stock Out (-)
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -638,41 +784,121 @@ export default function ShopPage() {
                   min="1"
                   value={stockForm.quantity}
                   onChange={(e) => setStockForm({ ...stockForm, quantity: e.target.value })}
-                  placeholder="e.g. 10"
+                  placeholder="10"
                   className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                   style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(45,212,191,0.4)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                   required
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
                 <button
                   type="button"
                   onClick={() => setStockTarget(null)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-[var(--accent)]"
-                  style={{ borderColor: "rgba(255,255,255,0.1)", color: "var(--muted-foreground)" }}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={submittingStock || !stockForm.quantity.trim()}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-all disabled:opacity-40 hover:opacity-90"
+                  disabled={submittingStock}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 flex items-center gap-2"
                   style={{ background: "linear-gradient(135deg, #2dd4bf, #3b82f6)" }}
                 >
-                  {submittingStock ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      Saving…
-                    </span>
-                  ) : (
-                    "Save"
-                  )}
+                  {submittingStock && <Loader2 size={14} className="animate-spin" />}
+                  Confirm
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reorder Modal ── */}
+      {reorderModalData && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={() => setReorderModalData(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border overflow-hidden"
+            style={{
+              background: "#0d0d14",
+              borderColor: "rgba(255,255,255,0.1)",
+              boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="flex items-center justify-between px-6 py-4 border-b"
+              style={{ borderColor: "rgba(255,255,255,0.06)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Mail size={18} style={{ color: "#f59e0b" }} />
+                <h2 className="text-base font-semibold text-[var(--foreground)]">
+                  AI Reorder Draft: {reorderModalData.productName}
+                </h2>
+              </div>
+              <button
+                onClick={() => setReorderModalData(null)}
+                className="rounded-lg p-1.5 hover:bg-[var(--accent)] transition-colors text-[var(--muted-foreground)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">
+                  Supplier Email
+                </label>
+                <p className="text-sm font-mono text-[var(--foreground)] bg-black/30 px-3 py-2 rounded-xl border" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                  {reorderModalData.supplierEmail}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                  Email Draft (Editable)
+                </label>
+                <textarea
+                  value={reorderModalData.draft}
+                  onChange={(e) =>
+                    setReorderModalData({ ...reorderModalData, draft: e.target.value })
+                  }
+                  rows={8}
+                  className="w-full rounded-xl border p-3 text-sm bg-transparent focus:outline-none font-mono"
+                  style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(reorderModalData.draft);
+                    showToast("Copied draft to clipboard", "ok");
+                  }}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border text-[var(--foreground)] hover:bg-[var(--accent)] transition-colors flex items-center gap-2"
+                  style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                >
+                  Copy to Clipboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast(`Simulated sending reorder email to ${reorderModalData.supplierEmail}!`, "ok");
+                    setReorderModalData(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 flex items-center gap-2"
+                  style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}
+                >
+                  Simulate Send
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

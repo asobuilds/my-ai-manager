@@ -1,5 +1,19 @@
 """Tests for Role-Based Access Control (RBAC)."""
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
+
+
+class MockResponse:
+    def __init__(self, status_code: int = 200, json_data: dict | None = None):
+        self._status_code = status_code
+        self._json_data = json_data or {}
+
+    def json(self):
+        return self._json_data
+
+    def raise_for_status(self):
+        if self._status_code >= 400:
+            raise Exception(f"HTTP {self._status_code}")
 
 
 class TestRBAC:
@@ -29,8 +43,16 @@ class TestRBAC:
 
     def test_owner_can_access_chat(self, client: TestClient, auth_headers):
         """Owner should be able to chat."""
-        resp = client.post("/api/v1/chat/", json={"message": "hello"}, headers=auth_headers)
-        assert resp.status_code == 200
+        mock_body = {"choices": [{"message": {"content": "Hello!"}}]}
+        with patch("app.api.chat.httpx.AsyncClient") as MockClient:
+            mock_client = AsyncMock()
+            mock_resp = MockResponse(json_data=mock_body)
+            mock_client.post = AsyncMock(return_value=mock_resp)
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+            MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            resp = client.post("/api/v1/chat/", json={"message": "hello"}, headers=auth_headers)
+            assert resp.status_code == 200
 
     def test_owner_can_access_jobs(self, client: TestClient, auth_headers):
         """Owner should be able to list jobs."""
@@ -84,6 +106,4 @@ class TestRBAC:
             json={"bio": "test bio"},
             headers=staff_headers,
         )
-        # Profile endpoint still uses get_current_user, so staff can access it
-        # This test documents current behavior - profile is not owner-restricted
-        assert resp.status_code in [200, 403]  # Accept either for now
+        assert resp.status_code in [200, 403]
