@@ -318,3 +318,25 @@ class SocialPostOut(BaseModel):
 class SocialGenerateRequest(BaseModel):
     product_name: str = Field(min_length=1, max_length=255)
     platform: str = Field(min_length=1, max_length=50)
+
+
+# ---------- User Preferences ----------
+
+class UserPreferencesOut(BaseModel):
+    user_id: UUID
+    theme_mode: str
+    theme_palette: str
+    font_size: str
+    enabled_features: list[str]
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
+class UserPreferencesUpdate(BaseModel):
+    theme_mode: str | None = None
+    theme_palette: str | None = None
+    font_size: str | None = None
+    enabled_features: list[str] | None = None

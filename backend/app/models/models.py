@@ -32,6 +32,7 @@ class User(Base):
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
     calendar_events = relationship("CalendarEvent", back_populates="user", cascade="all, delete-orphan")
     social_posts = relationship("SocialPost", back_populates="user", cascade="all, delete-orphan")
+    preferences = relationship("UserPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     __table_args__ = ()
 
@@ -286,4 +287,36 @@ class SocialPost(Base):
     __table_args__ = (
         Index("ix_social_posts_user_id", "user_id"),
         Index("ix_social_posts_status", "status"),
+    )
+
+
+class UserPreference(Base):
+    __tablename__ = "user_preferences"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    theme_mode = Column(String(50), default="system", nullable=False)
+    theme_palette = Column(String(50), default="teal", nullable=False)
+    font_size = Column(String(50), default="medium", nullable=False)
+    _enabled_features = Column("enabled_features", Text, default='["dashboard","calendar","shop","social","jobs","inventory","settings","profile"]', nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="preferences")
+
+    @property
+    def enabled_features(self):
+        try:
+            return json.loads(self._enabled_features)
+        except Exception:
+            return ["dashboard","calendar","shop","social","jobs","inventory","settings","profile"]
+
+    @enabled_features.setter
+    def enabled_features(self, value):
+        if isinstance(value, str):
+            self._enabled_features = value
+        else:
+            self._enabled_features = json.dumps(value)
+
+    __table_args__ = (
+        Index("ix_user_preferences_user_id", "user_id"),
     )
