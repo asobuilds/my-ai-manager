@@ -52,7 +52,7 @@ function SidebarContentInner() {
   const { enabled_features } = usePreferences();
 
   const visibleItems = navItems.filter(
-    (item) => !item.feature || enabled_features.includes(item.feature)
+    (item) => item.label === "Chat" || !item.feature || enabled_features.includes(item.feature)
   );
 
   function handleLogout() {
