@@ -32,8 +32,28 @@ def get_preferences(
         db.refresh(prefs)
     elif "chat" not in prefs.enabled_features:
         prefs.enabled_features.append("chat")
-        db.commit()
-        db.refresh(prefs)
+    if "health" not in prefs.enabled_features:
+        prefs.enabled_features.append("health")
+    if "home" not in prefs.enabled_features:
+        prefs.enabled_features.append("home")
+    if "dashboard" not in prefs.enabled_features:
+        prefs.enabled_features.append("dashboard")
+    if "calendar" not in prefs.enabled_features:
+        prefs.enabled_features.append("calendar")
+    if "shop" not in prefs.enabled_features:
+        prefs.enabled_features.append("shop")
+    if "social" not in prefs.enabled_features:
+        prefs.enabled_features.append("social")
+    if "jobs" not in prefs.enabled_features:
+        prefs.enabled_features.append("jobs")
+    if "inventory" not in prefs.enabled_features:
+        prefs.enabled_features.append("inventory")
+    if "settings" not in prefs.enabled_features:
+        prefs.enabled_features.append("settings")
+    if "profile" not in prefs.enabled_features:
+        prefs.enabled_features.append("profile")
+    db.commit()
+    db.refresh(prefs)
     return prefs
 
 

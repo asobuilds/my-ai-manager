@@ -27,6 +27,8 @@ import {
   User,
   LogOut,
   MessageSquare,
+  Heart,
+  Home,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
@@ -40,9 +42,11 @@ const navItems = [
   { label: "Shop Manager", href: "/dashboard/shop", icon: Package, feature: "shop", iconColor: "text-emerald-400" },
   { label: "Social Media", href: "/dashboard/social", icon: Megaphone, feature: "social", iconColor: "text-pink-400" },
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase, feature: "jobs", iconColor: "text-amber-400" },
-  { label: "Integrations", href: "/dashboard/integrations", icon: Plug, iconColor: "text-indigo-400" },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings, iconColor: "text-green-400" },
-  { label: "Profile", href: "/dashboard/profile", icon: User, iconColor: "text-violet-400" },
+  { label: "Health", href: "/dashboard/health", icon: Heart, feature: "health", iconColor: "text-red-400" },
+  { label: "Home", href: "/dashboard/home", icon: Home, feature: "home", iconColor: "text-orange-400" },
+  { label: "Integrations", href: "/dashboard/integrations", icon: Plug, feature: "integrations", iconColor: "text-indigo-400" },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings, feature: "settings", iconColor: "text-green-400" },
+  { label: "Profile", href: "/dashboard/profile", icon: User, feature: "profile", iconColor: "text-violet-400" },
 ];
 
 function SidebarContentInner() {
