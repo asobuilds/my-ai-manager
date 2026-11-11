@@ -13,6 +13,8 @@ from app.api.chat import router as chat_router
 from app.api.social import router as social_router
 from app.api.preferences import router as preferences_router
 from app.api.suppliers import router as suppliers_router
+from app.api.health import router as health_router
+from app.api.home import router as home_router
 from app.core.config import get_settings
 from app.core.database import Base, engine
 
@@ -48,6 +50,8 @@ app.include_router(calendar_router, prefix="/api/v1")
 app.include_router(social_router, prefix="/api/v1")
 app.include_router(preferences_router, prefix="/api/v1")
 app.include_router(suppliers_router, prefix="/api/v1")
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(home_router, prefix="/api/v1")
 
 
 @app.get("/health")

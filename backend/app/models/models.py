@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Index
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -33,6 +33,10 @@ class User(Base):
     calendar_events = relationship("CalendarEvent", back_populates="user", cascade="all, delete-orphan")
     social_posts = relationship("SocialPost", back_populates="user", cascade="all, delete-orphan")
     preferences = relationship("UserPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    health_profile = relationship("HealthProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    health_vitals = relationship("HealthVitals", back_populates="user", cascade="all, delete-orphan")
+    home_assets = relationship("HomeAsset", back_populates="user", cascade="all, delete-orphan")
+    maintenance_tasks = relationship("MaintenanceTask", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = ()
 
@@ -339,4 +343,106 @@ class UserPreference(Base):
 
     __table_args__ = (
         Index("ix_user_preferences_user_id", "user_id"),
+    )
+
+
+class HealthProfile(Base):
+    __tablename__ = "health_profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    blood_type = Column(String(10), nullable=True)
+    genotype = Column(String(20), nullable=True)
+    allergies = Column(Text, nullable=True)
+    medical_conditions = Column(Text, nullable=True)
+
+    user = relationship("User", back_populates="health_profile")
+
+    __table_args__ = (
+        Index("ix_health_profiles_user_id", "user_id"),
+    )
+
+
+class HealthVitals(Base):
+    __tablename__ = "health_vitals"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    systolic = Column(Integer, nullable=True)
+    diastolic = Column(Integer, nullable=True)
+    heart_rate = Column(Integer, nullable=True)
+    weight = Column(Float, nullable=True)
+    steps = Column(Integer, nullable=True)
+    calories = Column(Integer, nullable=True)
+    recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="health_vitals")
+
+    __table_args__ = (
+        Index("ix_health_vitals_user_id", "user_id"),
+        Index("ix_health_vitals_recorded_at", "recorded_at"),
+    )
+
+
+class HomeAsset(Base):
+    __tablename__ = "home_assets"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = Column(String(255), nullable=False)
+    category = Column(String(100), nullable=False)
+    serial_number = Column(String(255), nullable=True)
+    purchase_date = Column(DateTime, nullable=True)
+    warranty_expiry = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="home_assets")
+    maintenance_tasks = relationship("MaintenanceTask", back_populates="asset")
+
+    __table_args__ = (
+        Index("ix_home_assets_user_id", "user_id"),
+        Index("ix_home_assets_category", "category"),
+    )
+
+
+class MaintenanceTask(Base):
+    __tablename__ = "maintenance_tasks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    asset_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("home_assets.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    due_date = Column(DateTime, nullable=False)
+    is_recurring = Column(Boolean, default=False, nullable=False)
+    recurrence_days = Column(Integer, nullable=True)
+    is_completed = Column(Boolean, default=False, nullable=False)
+
+    user = relationship("User", back_populates="maintenance_tasks")
+    asset = relationship("HomeAsset", back_populates="maintenance_tasks")
+
+    __table_args__ = (
+        Index("ix_maintenance_tasks_user_id", "user_id"),
+        Index("ix_maintenance_tasks_due_date", "due_date"),
+        Index("ix_maintenance_tasks_is_completed", "is_completed"),
     )

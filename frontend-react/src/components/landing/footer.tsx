@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="bg-slate-950 border-t border-white/10 text-slate-400 py-16 px-6">
@@ -78,7 +77,7 @@ export default function Footer() {
             </a>
           </div>
           <p className="text-xs text-slate-500">
-            &copy; {currentYear} Aso. All rights reserved.
+            &copy; Aso. All rights reserved.
           </p>
         </div>
       </div>

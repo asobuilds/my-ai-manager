@@ -13,7 +13,18 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_owner
-from app.models.models import CalendarEvent, ChatMessage, Conversation, Message, Product, User
+from app.models.models import (
+    CalendarEvent,
+    ChatMessage,
+    Conversation,
+    HealthProfile,
+    HealthVitals,
+    HomeAsset,
+    MaintenanceTask,
+    Message,
+    Product,
+    User,
+)
 from app.schemas.schemas import ChatRequest, ExplainRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -171,6 +182,51 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
         for p in low_stock_products
     ]
 
+    health_profile = (
+        db.query(HealthProfile)
+        .filter(HealthProfile.user_id == current_user.id)
+        .first()
+    )
+    latest_vitals = (
+        db.query(HealthVitals)
+        .filter(HealthVitals.user_id == current_user.id)
+        .order_by(HealthVitals.recorded_at.desc())
+        .first()
+    )
+
+    blood_type = health_profile.blood_type if health_profile else None
+    genotype = health_profile.genotype if health_profile else None
+    if latest_vitals:
+        vitals_summary = (
+            f"BP {latest_vitals.systolic}/{latest_vitals.diastolic}, "
+            f"HR {latest_vitals.heart_rate}, Steps today: {latest_vitals.steps}"
+        )
+    else:
+        vitals_summary = "No vitals recorded"
+
+    home_assets = (
+        db.query(HomeAsset)
+        .filter(HomeAsset.user_id == current_user.id)
+        .all()
+    )
+    pending_maintenance = (
+        db.query(MaintenanceTask)
+        .filter(
+            MaintenanceTask.user_id == current_user.id,
+            MaintenanceTask.is_completed.is_(False),
+        )
+        .order_by(MaintenanceTask.due_date.asc())
+        .all()
+    )
+    maintenance_context = [
+        {
+            "title": task.title,
+            "due_date": task.due_date.isoformat() if task.due_date else None,
+            "asset_id": str(task.asset_id) if task.asset_id else None,
+        }
+        for task in pending_maintenance
+    ]
+
     if not body.conversation_id:
         conversation_id = str(uuid.uuid4())
         conversation = Conversation(id=conversation_id, user_id=current_user.id)
@@ -211,6 +267,22 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
         f"- Location: {user_context.get('location') or 'unknown'}\n"
         f"- Role: {user_context.get('role') or 'unknown'}\n"
         f"- Low stock items: {json.dumps(low_stock_context, default=str) if low_stock_context else 'None'}"
+    )
+    system_prompt_parts.append(
+        f"User Health Context: Blood Type: {blood_type or 'unknown'}, "
+        f"Genotype: {genotype or 'unknown'}. Latest Vitals: {vitals_summary}."
+    )
+    system_prompt_parts.append(
+        "If the user asks about health, provide general wellness context and always "
+        "recommend consulting a doctor. Do not diagnose."
+    )
+    system_prompt_parts.append(
+        f"User Home Context: You have {len(home_assets)} registered assets. "
+        f"Upcoming maintenance: "
+        f"{json.dumps(maintenance_context, default=str) if maintenance_context else 'None'}."
+    )
+    system_prompt_parts.append(
+        "If the user asks about home maintenance or assets, use this context to answer."
     )
     if inbox_context:
         system_prompt_parts.append(

@@ -12,15 +12,19 @@ import {
   Plug,
   Settings,
   User,
+  Heart,
+  Home,
 } from "lucide-react";
 
 const navItems = [
   { label: "Chat", href: "/dashboard", icon: MessageCircle },
   { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
+  { label: "Home", href: "/dashboard/home", icon: Home, iconClass: "text-orange-400" },
   { label: "Data Inventory", href: "/dashboard/inventory", icon: Inbox },
   { label: "Shop Manager", href: "/dashboard/shop", icon: Package },
   { label: "Social Media", href: "/dashboard/social", icon: Megaphone },
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase },
+  { label: "Health", href: "/dashboard/health", icon: Heart, iconClass: "text-red-400" },
   { label: "Integrations", href: "/dashboard/integrations", icon: Plug },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Profile", href: "/dashboard/profile", icon: User },
@@ -44,7 +48,7 @@ export function DashboardNav() {
             }`}
             style={active ? { background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" } : undefined}
           >
-            <item.icon size={18} />
+            <item.icon size={18} className={item.iconClass || ""} />
             {item.label}
           </Link>
         );

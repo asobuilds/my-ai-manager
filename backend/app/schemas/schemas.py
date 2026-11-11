@@ -361,3 +361,97 @@ class UserPreferencesUpdate(BaseModel):
     theme_palette: str | None = None
     font_size: str | None = None
     enabled_features: list[str] | None = None
+
+
+# ---------- Health ----------
+
+class HealthProfileCreate(BaseModel):
+    blood_type: str | None = Field(default=None, max_length=10)
+    genotype: str | None = Field(default=None, max_length=20)
+    allergies: str | None = None
+    medical_conditions: str | None = None
+
+
+class HealthProfileOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    blood_type: str | None
+    genotype: str | None
+    allergies: str | None
+    medical_conditions: str | None
+
+    class Config:
+        from_attributes = True
+
+
+class HealthVitalsCreate(BaseModel):
+    systolic: int | None = Field(default=None, ge=0)
+    diastolic: int | None = Field(default=None, ge=0)
+    heart_rate: int | None = Field(default=None, ge=0)
+    weight: float | None = Field(default=None, ge=0)
+    steps: int | None = Field(default=None, ge=0)
+    calories: int | None = Field(default=None, ge=0)
+    recorded_at: datetime | None = None
+
+
+class HealthVitalsOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    systolic: int | None
+    diastolic: int | None
+    heart_rate: int | None
+    weight: float | None
+    steps: int | None
+    calories: int | None
+    recorded_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Home Management ----------
+
+class HomeAssetCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    category: str = Field(min_length=1, max_length=100)
+    serial_number: str | None = Field(default=None, max_length=255)
+    purchase_date: datetime | None = None
+    warranty_expiry: datetime | None = None
+
+
+class HomeAssetOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    name: str
+    category: str
+    serial_number: str | None
+    purchase_date: datetime | None
+    warranty_expiry: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
+class MaintenanceTaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    due_date: datetime
+    asset_id: UUID | None = None
+    is_recurring: bool = False
+    recurrence_days: int | None = Field(default=None, ge=1)
+    is_completed: bool = False
+
+
+class MaintenanceTaskOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    asset_id: UUID | None
+    title: str
+    description: str | None
+    due_date: datetime
+    is_recurring: bool
+    recurrence_days: int | None
+    is_completed: bool
+
+    class Config:
+        from_attributes = True
