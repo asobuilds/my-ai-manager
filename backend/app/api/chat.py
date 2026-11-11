@@ -17,6 +17,7 @@ from app.models.models import (
     CalendarEvent,
     ChatMessage,
     Conversation,
+    DailyReport,
     HealthProfile,
     HealthVitals,
     HomeAsset,
@@ -227,6 +228,14 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
         for task in pending_maintenance
     ]
 
+    latest_report = (
+        db.query(DailyReport)
+        .filter(DailyReport.user_id == current_user.id)
+        .order_by(DailyReport.created_at.desc())
+        .first()
+    )
+    daily_report_text = latest_report.report_text if latest_report else None
+
     if not body.conversation_id:
         conversation_id = str(uuid.uuid4())
         conversation = Conversation(id=conversation_id, user_id=current_user.id)
@@ -290,6 +299,15 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
         )
     else:
         system_prompt_parts.append("The user has no unread messages.")
+
+    if daily_report_text:
+        system_prompt_parts.append(
+            f"Latest Daily Report:\n{daily_report_text}"
+        )
+    else:
+        system_prompt_parts.append(
+            "No daily report available yet. The proactive daily report job runs at 11 PM UTC."
+        )
 
     messages_history: list[dict[str, Any]] = [
         {"role": "system", "content": "\n".join(system_prompt_parts)}

@@ -289,22 +289,18 @@ export default function CalendarPage() {
                     const color = TYPE_COLORS[event.event_type] ?? "#94a3b8";
                     const bg = TYPE_BG[event.event_type] ?? "rgba(255,255,255,0.05)";
                     return (
-                      <div key={event.id} className="relative">
-                        <span
-                          className="absolute -left-6 top-5 w-3 h-3 rounded-full border-2"
-                          style={{ background: "#0a0a0f", borderColor: color }}
-                        />
-                        <div
-                          className="rounded-xl border p-4 flex items-start gap-4"
-                          style={{
-                            background: "rgba(255,255,255,0.03)",
-                            borderColor: "rgba(255,255,255,0.06)",
-                          }}
-                        >
-                          <div
-                            className="w-1 self-stretch rounded-full shrink-0"
-                            style={{ background: color }}
+                        <div key={event.id} className="relative">
+                          <span
+                            className="absolute -left-6 top-5 w-3 h-3 rounded-full border-2"
+                            style={{ background: "#0a0a0f", borderColor: color }}
                           />
+                          <div
+                            className="rounded-xl border p-4 flex items-start gap-4 bg-white/5 backdrop-blur-md border-white/10"
+                          >
+                            <div
+                              className="w-1 self-stretch rounded-full shrink-0"
+                              style={{ background: color }}
+                            />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -354,17 +350,11 @@ export default function CalendarPage() {
       {/* ── New Event Modal ── */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
           onClick={() => setShowModal(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border overflow-hidden"
-            style={{
-              background: "#0d0d14",
-              borderColor: "rgba(255,255,255,0.1)",
-              boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
-            }}
+            className="w-full max-w-md rounded-2xl border overflow-hidden bg-white/5 backdrop-blur-md border-white/10"
             onClick={(e) => e.stopPropagation()}
           >
             <div

@@ -221,8 +221,7 @@ export default function HealthPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Blood Type */}
             <div
-              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40"
-              style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40 bg-white/5 backdrop-blur-md border-white/10"
             >
               <p className="text-xs uppercase tracking-wider text-slate-400 font-medium mb-1">Blood Type</p>
               <p className="text-3xl font-extrabold text-white mt-2">{profile.blood_type || "—"}</p>
@@ -233,8 +232,7 @@ export default function HealthPage() {
 
             {/* Genotype */}
             <div
-              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40"
-              style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40 bg-white/5 backdrop-blur-md border-white/10"
             >
               <p className="text-xs uppercase tracking-wider text-slate-400 font-medium mb-1">Genotype</p>
               <p className="text-3xl font-extrabold text-white mt-2">{profile.genotype || "—"}</p>
@@ -245,8 +243,7 @@ export default function HealthPage() {
 
             {/* Allergies */}
             <div
-              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40"
-              style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40 bg-white/5 backdrop-blur-md border-white/10"
             >
               <p className="text-xs uppercase tracking-wider text-slate-400 font-medium mb-1">Allergies</p>
               <div className="flex flex-wrap gap-1.5 mt-3">
@@ -264,8 +261,7 @@ export default function HealthPage() {
 
             {/* Medical Conditions */}
             <div
-              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40"
-              style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+              className="p-6 rounded-2xl border transition-all duration-300 hover:border-teal-500/40 bg-white/5 backdrop-blur-md border-white/10"
             >
               <p className="text-xs uppercase tracking-wider text-slate-400 font-medium mb-1">Conditions</p>
               <div className="flex flex-wrap gap-1.5 mt-3">
@@ -288,8 +284,7 @@ export default function HealthPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Log Vitals Form (1 Col) */}
         <div
-          className="p-6 rounded-2xl border h-fit"
-          style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+          className="p-6 rounded-2xl border h-fit bg-white/5 backdrop-blur-md border-white/10"
         >
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-semibold text-white flex items-center gap-2">
@@ -405,8 +400,7 @@ export default function HealthPage() {
 
         {/* Vitals Table (2 Cols) */}
         <div
-          className="lg:col-span-2 p-6 rounded-2xl border overflow-hidden flex flex-col justify-between"
-          style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+          className="lg:col-span-2 p-6 rounded-2xl border overflow-hidden flex flex-col justify-between bg-white/5 backdrop-blur-md border-white/10"
         >
           <div>
             <div className="flex items-center justify-between mb-6">

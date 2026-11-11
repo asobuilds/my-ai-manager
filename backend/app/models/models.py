@@ -37,6 +37,7 @@ class User(Base):
     health_vitals = relationship("HealthVitals", back_populates="user", cascade="all, delete-orphan")
     home_assets = relationship("HomeAsset", back_populates="user", cascade="all, delete-orphan")
     maintenance_tasks = relationship("MaintenanceTask", back_populates="user", cascade="all, delete-orphan")
+    daily_reports = relationship("DailyReport", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = ()
 
@@ -445,4 +446,24 @@ class MaintenanceTask(Base):
         Index("ix_maintenance_tasks_user_id", "user_id"),
         Index("ix_maintenance_tasks_due_date", "due_date"),
         Index("ix_maintenance_tasks_is_completed", "is_completed"),
+    )
+
+
+class DailyReport(Base):
+    __tablename__ = "daily_reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    report_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="daily_reports")
+
+    __table_args__ = (
+        Index("ix_daily_reports_user_id", "user_id"),
+        Index("ix_daily_reports_created_at", "created_at"),
     )

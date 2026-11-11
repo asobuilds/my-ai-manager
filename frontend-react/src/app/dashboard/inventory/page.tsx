@@ -295,8 +295,7 @@ export default function InventoryPage() {
                 return (
                   <div
                     key={msg.id}
-                    className="rounded-xl border p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 hover:bg-[var(--accent)] transition-colors"
-                    style={{ borderColor: "rgba(255,255,255,0.06)" }}
+                    className="rounded-xl border p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 hover:bg-white/10 transition-colors bg-white/5 backdrop-blur-md border-white/10"
                   >
                     {/* Priority badge */}
                     <div

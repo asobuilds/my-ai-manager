@@ -155,8 +155,7 @@ export default function JobsPage() {
           {STATUS_ORDER.map((status) => (
             <div
               key={status}
-              className="rounded-2xl border p-4 min-h-[400px]"
-              style={{ background: COLUMN_BG[status], borderColor: "rgba(255,255,255,0.06)" }}
+              className="rounded-2xl border p-4 min-h-[400px] bg-white/5 backdrop-blur-md border-white/10"
             >
               {/* Column header */}
               <div className="flex items-center gap-2 mb-4">
@@ -183,11 +182,7 @@ export default function JobsPage() {
                 {grouped[status].map((job) => (
                   <div
                     key={job.id}
-                    className="rounded-xl border p-3 transition-all hover:border-[var(--primary)]/30"
-                    style={{
-                      background: "rgba(255,255,255,0.03)",
-                      borderColor: "rgba(255,255,255,0.06)",
-                    }}
+                    className="rounded-xl border p-3 transition-all hover:border-[var(--primary)]/30 bg-white/5 backdrop-blur-sm border-white/10"
                   >
                     <div className="flex items-start gap-2">
                       <div

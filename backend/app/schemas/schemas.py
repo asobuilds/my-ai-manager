@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -452,6 +453,29 @@ class MaintenanceTaskOut(BaseModel):
     is_recurring: bool
     recurrence_days: int | None
     is_completed: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Daily Report / Analytics ----------
+
+class SalesSummary(BaseModel):
+    total_revenue: float = 0.0
+    top_products: list[dict[str, Any]] = Field(default_factory=list)
+    avg_daily_sales: float = 0.0
+    period_start: str | None = None
+    period_end: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class DailyReportOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    report_text: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

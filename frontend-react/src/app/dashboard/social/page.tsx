@@ -184,14 +184,7 @@ export default function SocialPage() {
       )}
 
       {/* ── AI Generator ── */}
-      <div
-        className="rounded-2xl border p-6 mb-8"
-        style={{
-          background: "rgba(255,255,255,0.03)",
-          borderColor: "rgba(45,212,191,0.18)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
-        }}
-      >
+      <div className="rounded-2xl border p-6 mb-8 bg-white/5 backdrop-blur-md border-white/10">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles size={16} style={{ color: "#2dd4bf" }} />
           <h2 className="text-base font-semibold text-[var(--foreground)]">AI Post Generator</h2>
@@ -360,14 +353,12 @@ export default function SocialPage() {
           </div>
         ) : (
           <div
-            className="rounded-xl border overflow-x-auto"
-            style={{ borderColor: "rgba(255,255,255,0.06)" }}
+            className="rounded-xl border overflow-x-auto bg-white/5 backdrop-blur-md border-white/10"
           >
             <table className="w-full text-sm">
               <thead>
                 <tr
-                  className="text-left text-xs uppercase tracking-wider text-[var(--muted-foreground)]"
-                  style={{ background: "rgba(255,255,255,0.03)" }}
+                  className="text-left text-xs uppercase tracking-wider text-[var(--muted-foreground)] bg-white/5"
                 >
                   <th className="px-5 py-3 font-medium">Platform</th>
                   <th className="px-5 py-3 font-medium">Content</th>

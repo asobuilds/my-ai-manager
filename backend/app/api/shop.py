@@ -14,11 +14,13 @@ from uuid import UUID
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_owner, get_current_user
-from app.models.models import Product, StockMovement, User
+from app.models.models import DailyReport, Product, StockMovement, User
 from app.schemas.schemas import (
+    DailyReportOut,
     ProductCreate,
     ProductResponse,
     ProductUpdate,
+    SalesSummary,
     StockMovementCreate,
     StockMovementResponse,
 )
@@ -214,3 +216,88 @@ Generate a professional, concise email draft asking the supplier to restock {pro
 
     response_text = choices[0].get("message", {}).get("content", "")
     return {"draft": response_text, "supplier_email": supplier.email, "product_name": product.name}
+
+
+# ---------- Analytics ----------
+
+@router.get("/analytics", response_model=SalesSummary)
+def get_shop_analytics(
+    current_user: User = Depends(get_current_owner),
+    db: Session = Depends(get_db),
+):
+    """Return Pandas-powered sales summary for the current user this week."""
+    from datetime import date, timedelta
+
+    import pandas as pd
+
+    end_date = date.today()
+    start_date = end_date - timedelta(days=6)
+    start_dt = datetime.combine(start_date, datetime.min.time())
+    end_dt = datetime.combine(end_date, datetime.max.time())
+
+    movements = (
+        db.query(StockMovement)
+        .join(Product)
+        .filter(
+            Product.user_id == current_user.id,
+            StockMovement.movement_type == "out",
+            StockMovement.created_at >= start_dt,
+            StockMovement.created_at <= end_dt,
+        )
+        .all()
+    )
+
+    df = pd.DataFrame([
+        {
+            "product": m.product.name if m.product else "Unknown",
+            "sku": m.product.sku if m.product else "",
+            "quantity": m.quantity,
+            "price_cents": m.product.price if m.product else 0,
+            "date": m.created_at.date() if m.created_at else None,
+        }
+        for m in movements
+    ])
+
+    total_revenue = round((df["quantity"] * df["price_cents"]).sum() / 100, 2) if not df.empty else 0.0
+
+    if df.empty:
+        top_list: list[dict[str, Any]] = []
+        avg_daily = 0.0
+    else:
+        top_products = (
+            df.groupby("product")["quantity"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(3)
+            .reset_index()
+        )
+        top_list = [
+            {"name": row["product"], "units_sold": int(row["quantity"])}
+            for _, row in top_products.iterrows()
+        ]
+
+        daily_counts = df.dropna(subset=["date"]).groupby("date").size()
+        avg_daily = round(float(daily_counts.mean()), 2) if len(daily_counts) > 0 else 0.0
+
+    return SalesSummary(
+        total_revenue=total_revenue,
+        top_products=top_list,
+        avg_daily_sales=avg_daily,
+        period_start=start_date.isoformat(),
+        period_end=end_date.isoformat(),
+    )
+
+
+@router.get("/daily-report", response_model=DailyReportOut | None)
+def get_latest_daily_report(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the most recent daily report for the current user, if any."""
+    report = (
+        db.query(DailyReport)
+        .filter(DailyReport.user_id == current_user.id)
+        .order_by(DailyReport.created_at.desc())
+        .first()
+    )
+    return report

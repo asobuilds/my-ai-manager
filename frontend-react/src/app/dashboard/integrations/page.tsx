@@ -127,13 +127,7 @@ export default function IntegrationsPage() {
           return (
             <div
               key={p.provider}
-              className="rounded-2xl border p-5 transition-all hover:border-[var(--primary)]/30 group"
-              style={{
-                background: connected ? "rgba(16,185,129,0.06)" : "var(--card)",
-                borderColor: connected
-                  ? "rgba(16,185,129,0.2)"
-                  : "rgba(255,255,255,0.06)",
-              }}
+              className="rounded-2xl border p-5 transition-all hover:border-[var(--primary)]/30 bg-white/5 backdrop-blur-md border-white/10 group"
             >
               <div className="flex items-start gap-4">
                 <div

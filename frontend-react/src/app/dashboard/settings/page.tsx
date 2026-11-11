@@ -27,11 +27,15 @@ export default function SettingsPage() {
 
   const FEATURES = [
     { label: "Dashboard", value: "dashboard" },
-    { label: "Calendar", value: "calendar" },
+    { label: "AI Chat", value: "chat" },
+    { label: "Data Inventory", value: "inventory" },
     { label: "Shop Manager", value: "shop" },
     { label: "Social Media", value: "social" },
     { label: "Job Tracker", value: "jobs" },
-    { label: "Data Inventory", value: "inventory" },
+    { label: "Calendar", value: "calendar" },
+    { label: "Health", value: "health" },
+    { label: "Home Management", value: "home" },
+    { label: "Integrations", value: "integrations" },
   ];
 
   function toggleFeature(value: string) {

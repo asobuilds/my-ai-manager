@@ -247,8 +247,7 @@ export default function HomeManagementPage() {
             {assets.map((asset, idx) => (
               <div
                 key={asset.id || idx}
-                className="p-6 rounded-2xl border transition-all duration-300 hover:border-orange-500/40 flex flex-col justify-between"
-                style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+                className="p-6 rounded-2xl border transition-all duration-300 hover:border-orange-500/40 flex flex-col justify-between bg-white/5 backdrop-blur-md border-white/10"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -304,9 +303,8 @@ export default function HomeManagementPage() {
               <div
                 key={task.id || idx}
                 className={`p-6 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${
-                  task.completed ? "opacity-60 bg-white/[0.01]" : "bg-white/[0.03]"
-                }`}
-                style={{ backdropFilter: "blur(16px)", borderColor: "rgba(255,255,255,0.08)" }}
+                  task.completed ? "opacity-60" : ""
+                } bg-white/5 backdrop-blur-md border-white/10`}
               >
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
