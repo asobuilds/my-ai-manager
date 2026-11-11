@@ -301,8 +301,7 @@ export default function ShopPage() {
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div
-          className="glass-card glass-card-transition p-5 border"
-          style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.2)" }}
+          className="glass-card glass-card-transition p-5 border bg-white/5 backdrop-blur-md border-white/10"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -323,8 +322,7 @@ export default function ShopPage() {
         </div>
 
         <div
-          className="glass-card glass-card-transition p-5 border"
-          style={{ background: "rgba(45,212,191,0.08)", borderColor: "rgba(45,212,191,0.2)" }}
+          className="glass-card glass-card-transition p-5 border bg-white/5 backdrop-blur-md border-white/10"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -343,8 +341,7 @@ export default function ShopPage() {
         </div>
 
         <div
-          className="glass-card glass-card-transition p-5 border"
-          style={{ background: "rgba(59,130,246,0.08)", borderColor: "rgba(59,130,246,0.2)" }}
+          className="glass-card glass-card-transition p-5 border bg-white/5 backdrop-blur-md border-white/10"
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -423,14 +420,12 @@ export default function ShopPage() {
           </div>
         ) : (
           <div
-            className="glass-card border overflow-x-auto"
-            style={{ borderColor: "rgba(255,255,255,0.06)" }}
+            className="glass-card border overflow-x-auto bg-white/5 backdrop-blur-md border-white/10"
           >
             <table className="w-full text-sm">
               <thead>
                 <tr
-                  className="text-left text-xs uppercase tracking-wider text-[var(--muted-foreground)]"
-                  style={{ background: "rgba(255,255,255,0.03)" }}
+                  className="text-left text-xs uppercase tracking-wider text-[var(--muted-foreground)] bg-white/5"
                 >
                   <th className="px-5 py-3 font-medium">Product Name</th>
                   <th className="px-5 py-3 font-medium">SKU</th>

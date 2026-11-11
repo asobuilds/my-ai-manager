@@ -63,7 +63,7 @@ function SidebarContentInner() {
   return (
     <>
       <SidebarHeader className="flex items-center gap-3 px-4 py-5 border-b border-border">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 bg-primary text-primary-foreground font-bold">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
           🤖
         </div>
         {state !== "collapsed" && (
@@ -86,7 +86,7 @@ function SidebarContentInner() {
                   tooltip={item.label}
                   className={
                     active
-                      ? "glass-link-active text-primary font-semibold"
+                      ? "glass-link-active text-blue-400 font-semibold bg-blue-500/10"
                       : "glass-link text-muted-foreground"
                   }
                 >
@@ -121,7 +121,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full bg-background text-foreground">
-        <Sidebar collapsible="icon" variant="inset" className="border-r sidebar-glass">
+        <Sidebar collapsible="icon" variant="inset" className="border-r border-white/5 bg-slate-900/80 backdrop-blur-md">
           <SidebarContentInner />
           <SidebarRail />
         </Sidebar>

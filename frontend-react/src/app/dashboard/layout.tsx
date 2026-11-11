@@ -35,10 +35,10 @@ export default function DashboardRouteLayout({
             You&apos;re not signed in. Showing a preview with no personal data.
           </span>
           <Link
-            href="/"
+            href="/login"
             className="font-semibold text-amber-100 underline underline-offset-4 hover:text-white"
           >
-            Back to home
+            Log In
           </Link>
         </div>
       )}

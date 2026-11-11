@@ -159,8 +159,7 @@ export default function InventoryPage() {
         {kpiCards.map((k) => (
           <div
             key={k.label}
-            className="rounded-xl p-5 border"
-            style={{ background: k.bg, borderColor: k.border }}
+            className="rounded-xl p-5 border bg-white/5 backdrop-blur-md border-white/10"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">

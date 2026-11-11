@@ -120,7 +120,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* ── Welcome ── */}
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">
@@ -139,8 +139,13 @@ export default function DashboardPage() {
         {kpiCards.map((k) => (
           <div
             key={k.label}
-            className="glass-card glass-card-transition p-5 border"
-            style={{ background: k.bg, borderColor: k.border }}
+            className={`glass-card glass-card-transition p-5 ${
+              k.label === "Critical"
+                ? "bg-red-500/5 border-red-500/20"
+                : k.label === "Action Needed"
+                  ? "bg-amber-500/5 border-amber-500/20"
+                  : "bg-emerald-500/5 border-emerald-500/20"
+            }`}
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -151,7 +156,15 @@ export default function DashboardPage() {
             {loading ? (
               <div className="h-9 w-12 rounded bg-[var(--muted)] animate-pulse" />
             ) : (
-              <p className="text-4xl font-bold leading-none" style={{ color: k.color }}>
+              <p
+                className={`text-4xl font-bold leading-none ${
+                  k.label === "Critical"
+                    ? "text-red-400"
+                    : k.label === "Action Needed"
+                      ? "text-amber-400"
+                      : "text-emerald-400"
+                }`}
+              >
                 {k.value}
               </p>
             )}
@@ -175,7 +188,15 @@ export default function DashboardPage() {
               }}
             >
               <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${item.bg}`}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
+                  item.color === "blue"
+                    ? "bg-blue-500/10"
+                    : item.color === "cyan"
+                      ? "bg-teal-500/10"
+                      : item.color === "emerald"
+                        ? "bg-emerald-500/10"
+                        : "bg-pink-500/10"
+                }`}
               >
                 <item.icon size={18} className={item.iconColor} />
               </div>
