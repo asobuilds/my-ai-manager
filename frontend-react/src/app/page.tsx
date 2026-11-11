@@ -18,7 +18,7 @@ const reveal = {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-950">
+    <div className="min-h-screen overflow-x-clip bg-slate-950">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
