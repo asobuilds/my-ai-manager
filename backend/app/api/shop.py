@@ -119,21 +119,30 @@ def add_stock_movement(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    if body.movement_type == "out" and product.stock_quantity < body.quantity:
+    # Determine the unit used and convert to base units
+    original_unit = body.original_unit or "piece"
+    if original_unit == "carton":
+        quantity_in_base_units = body.quantity * product.units_per_carton
+    else:
+        quantity_in_base_units = body.quantity
+
+    if body.movement_type == "out" and product.stock_quantity < quantity_in_base_units:
         raise HTTPException(
             status_code=400,
-            detail=f"Insufficient stock. Available: {product.stock_quantity}, requested: {body.quantity}",
+            detail=f"Insufficient stock. Available: {product.stock_quantity} pieces, requested: {quantity_in_base_units} pieces ({body.quantity} {original_unit}s)",
         )
 
     if body.movement_type == "in":
-        product.stock_quantity += body.quantity
+        product.stock_quantity += quantity_in_base_units
     else:
-        product.stock_quantity -= body.quantity
+        product.stock_quantity -= quantity_in_base_units
 
     movement = StockMovement(
         product_id=product_id,
         movement_type=body.movement_type,
         quantity=body.quantity,
+        original_unit=original_unit,
+        quantity_in_base_units=quantity_in_base_units,
         reason=body.reason,
     )
     db.add(movement)

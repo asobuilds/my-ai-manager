@@ -30,6 +30,9 @@ interface Product {
   name: string;
   category: string | null;
   price: number;
+  unit_type: string;
+  units_per_carton: number;
+  discount_percentage: number;
   stock_quantity: number;
   reorder_level: number;
   supplier_id: string | null;
@@ -42,6 +45,9 @@ interface ProductForm {
   sku: string;
   price: string;
   category: string;
+  unit_type: string;
+  units_per_carton: string;
+  discount_percentage: string;
   stock_quantity: string;
   reorder_level: string;
   supplier_id: string;
@@ -50,6 +56,7 @@ interface ProductForm {
 interface StockForm {
   movement_type: "in" | "out";
   quantity: string;
+  original_unit: "piece" | "carton";
 }
 
 const EMPTY_PRODUCT_FORM: ProductForm = {
@@ -57,13 +64,42 @@ const EMPTY_PRODUCT_FORM: ProductForm = {
   sku: "",
   price: "",
   category: "",
+  unit_type: "piece",
+  units_per_carton: "1",
+  discount_percentage: "0",
   stock_quantity: "0",
   reorder_level: "5",
   supplier_id: "",
 };
 
+const EMPTY_STOCK_FORM: StockForm = {
+  movement_type: "in",
+  quantity: "",
+  original_unit: "piece",
+};
+
 function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function formatStockDisplay(stockQuantity: number, unitsPerCarton: number, unitType: string): string {
+  if (unitType !== "carton" || unitsPerCarton <= 1) {
+    return `${stockQuantity} pcs`;
+  }
+  const cartons = Math.floor(stockQuantity / unitsPerCarton);
+  const pieces = stockQuantity % unitsPerCarton;
+  const parts: string[] = [];
+  if (cartons > 0) parts.push(`${cartons} cn`);
+  if (pieces > 0) parts.push(`${pieces} pcs`);
+  return parts.length > 0 ? parts.join(", ") : "0 pcs";
+}
+
+function formatDiscountedPrice(basePriceCents: number, discountPercentage: number): string {
+  if (!discountPercentage || discountPercentage === 0) {
+    return formatPrice(basePriceCents);
+  }
+  const discountedCents = Math.round(basePriceCents * (1 - discountPercentage / 100));
+  return `${formatPrice(discountedCents)} <span class="text-xs text-muted-foreground line-through ml-1">${formatPrice(basePriceCents)}</span>`;
 }
 
 export default function ShopPage() {
@@ -82,7 +118,7 @@ export default function ShopPage() {
   const [submittingProduct, setSubmittingProduct] = useState(false);
 
   const [stockTarget, setStockTarget] = useState<Product | null>(null);
-  const [stockForm, setStockForm] = useState<StockForm>({ movement_type: "in", quantity: "" });
+  const [stockForm, setStockForm] = useState<StockForm>(EMPTY_STOCK_FORM);
   const [submittingStock, setSubmittingStock] = useState(false);
 
   // Reorder Modal State
@@ -157,6 +193,9 @@ export default function ShopPage() {
         sku: productForm.sku.trim(),
         price: Math.round(Number(productForm.price) * 100),
         category: productForm.category.trim() || null,
+        unit_type: productForm.unit_type || "piece",
+        units_per_carton: Number(productForm.units_per_carton) || 1,
+        discount_percentage: Number(productForm.discount_percentage) || 0,
         stock_quantity: Number(productForm.stock_quantity) || 0,
         reorder_level: Number(productForm.reorder_level) || 0,
         supplier_id: productForm.supplier_id ? productForm.supplier_id : null,
@@ -182,9 +221,10 @@ export default function ShopPage() {
       await api.post(`/shop/products/${stockTarget.id}/stock`, {
         movement_type: stockForm.movement_type,
         quantity: Number(stockForm.quantity),
+        original_unit: stockForm.original_unit,
       });
       setStockTarget(null);
-      setStockForm({ movement_type: "in", quantity: "" });
+      setStockForm(EMPTY_STOCK_FORM);
       showToast("Stock updated", "ok");
       await loadData();
     } catch (err) {
@@ -470,14 +510,14 @@ export default function ShopPage() {
                         {product.sku}
                       </td>
                       <td className="px-5 py-3 text-right text-[var(--foreground)]">
-                        {formatPrice(product.price)}
+                        <span dangerouslySetInnerHTML={{ __html: formatDiscountedPrice(product.price, product.discount_percentage) }} />
                       </td>
                       <td className="px-5 py-3 text-right">
                         <span
                           className="font-medium"
                           style={{ color: low ? "#f87171" : "var(--foreground)" }}
                         >
-                          {product.stock_quantity}
+                          {formatStockDisplay(product.stock_quantity, product.units_per_carton, product.unit_type)}
                         </span>
                       </td>
                       <td className="px-5 py-3 text-right text-[var(--muted-foreground)]">
@@ -509,7 +549,7 @@ export default function ShopPage() {
                             <button
                               onClick={() => {
                                 setStockTarget(product);
-                                setStockForm({ movement_type: "in", quantity: "" });
+                                setStockForm(EMPTY_STOCK_FORM);
                               }}
                               className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-[var(--accent)]"
                               style={{ borderColor: "rgba(45,212,191,0.3)", color: "#2dd4bf" }}
@@ -618,6 +658,51 @@ export default function ShopPage() {
                   className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
                   style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
                 />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                    Unit Type
+                  </label>
+                  <select
+                    value={productForm.unit_type}
+                    onChange={(e) => setProductForm({ ...productForm, unit_type: e.target.value })}
+                    className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+                    style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                  >
+                    <option value="piece" style={{ background: "#1a1a2e" }}>Piece</option>
+                    <option value="carton" style={{ background: "#1a1a2e" }}>Carton</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                    Units per Carton
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={productForm.units_per_carton}
+                    onChange={(e) => setProductForm({ ...productForm, units_per_carton: e.target.value })}
+                    className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+                    style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                    Discount %
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={productForm.discount_percentage}
+                    onChange={(e) => setProductForm({ ...productForm, discount_percentage: e.target.value })}
+                    className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+                    style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -770,20 +855,36 @@ export default function ShopPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
-                  Quantity *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={stockForm.quantity}
-                  onChange={(e) => setStockForm({ ...stockForm, quantity: e.target.value })}
-                  placeholder="10"
-                  className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
-                  style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                    Unit
+                  </label>
+                  <select
+                    value={stockForm.original_unit}
+                    onChange={(e) => setStockForm({ ...stockForm, original_unit: e.target.value as "piece" | "carton" })}
+                    className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+                    style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                  >
+                    <option value="piece" style={{ background: "#1a1a2e" }}>Piece</option>
+                    <option value="carton" style={{ background: "#1a1a2e" }}>Carton</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1.5 block">
+                    Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={stockForm.quantity}
+                    onChange={(e) => setStockForm({ ...stockForm, quantity: e.target.value })}
+                    placeholder="10"
+                    className="w-full rounded-xl border px-4 py-2.5 text-sm bg-transparent focus:outline-none"
+                    style={{ borderColor: "rgba(255,255,255,0.08)", color: "var(--foreground)" }}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>

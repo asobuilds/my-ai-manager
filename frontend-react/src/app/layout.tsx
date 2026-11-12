@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} scroll-smooth`} suppressHydrationWarning>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-screen bg-[#0a0a0f] text-slate-100 antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <PreferenceProvider>
             {children}

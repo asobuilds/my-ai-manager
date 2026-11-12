@@ -45,6 +45,8 @@ class TestShopAnalytics:
                 product_id=product.id,
                 movement_type="out",
                 quantity=5,
+                original_unit="piece",
+                quantity_in_base_units=5,
                 reason="sale",
                 created_at=now,
             )

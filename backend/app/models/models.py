@@ -38,6 +38,7 @@ class User(Base):
     home_assets = relationship("HomeAsset", back_populates="user", cascade="all, delete-orphan")
     maintenance_tasks = relationship("MaintenanceTask", back_populates="user", cascade="all, delete-orphan")
     daily_reports = relationship("DailyReport", back_populates="user", cascade="all, delete-orphan")
+    vault_files = relationship("VaultFile", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = ()
 
@@ -243,7 +244,10 @@ class Product(Base):
     name = Column(String(255), nullable=False)
     category = Column(String(100), nullable=True)
     price = Column(Integer, nullable=False)  # stored in cents to avoid float issues
-    stock_quantity = Column(Integer, default=0)
+    unit_type = Column(String(50), default="piece", nullable=False)  # "piece" or "carton"
+    units_per_carton = Column(Integer, default=1, nullable=False)  # e.g., 40 pieces per carton
+    discount_percentage = Column(Float, default=0.0, nullable=False)  # 0.0 to 100.0
+    stock_quantity = Column(Integer, default=0)  # ALWAYS stores total base units (pieces)
     reorder_level = Column(Integer, default=5)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -263,7 +267,9 @@ class StockMovement(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     movement_type = Column(String(10), nullable=False)  # "in" or "out"
-    quantity = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)  # raw input quantity
+    original_unit = Column(String(20), nullable=True)  # "piece" or "carton" as entered by user
+    quantity_in_base_units = Column(Integer, nullable=False)  # always stored in base units for auditing
     reason = Column(String(255), nullable=True)  # sale, restock, adjustment, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -466,4 +472,25 @@ class DailyReport(Base):
     __table_args__ = (
         Index("ix_daily_reports_user_id", "user_id"),
         Index("ix_daily_reports_created_at", "created_at"),
+    )
+
+
+class VaultFile(Base):
+    __tablename__ = "vault_files"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    filename = Column(String(500), nullable=False)
+    encrypted_path = Column(String(1000), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="vault_files")
+
+    __table_args__ = (
+        Index("ix_vault_files_user_id", "user_id"),
+        Index("ix_vault_files_created_at", "created_at"),
     )

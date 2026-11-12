@@ -29,7 +29,9 @@ class TestPreferences:
         assert data["theme_mode"] == "dark"
         assert data["theme_palette"] == "rose"
         assert data["font_size"] == "large"
-        assert data["enabled_features"] == ["dashboard", "calendar", "shop"]
+        # All required features must always be present
+        required = {"dashboard", "chat", "inventory", "shop", "social", "jobs", "calendar", "health", "home", "integrations", "settings", "profile"}
+        assert required.issubset(set(data["enabled_features"]))
 
         # Verify get returns updated values
         get_resp = client.get("/api/v1/preferences", headers=auth_headers)

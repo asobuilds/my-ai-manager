@@ -72,11 +72,32 @@
   }
 
   body {
-    background: radial-gradient(ellipse at top left, rgba(88, 28, 135, 0.15), transparent 50%),
-                radial-gradient(ellipse at top right, rgba(59, 130, 246, 0.1), transparent 50%),
-                hsl(var(--background));
-    color: hsl(var(--foreground));
+    background: #0a0a0f;
+    color: #f8fafc;
     min-height: 100vh;
+  }
+
+  [data-theme="dark"],
+  .dark {
+    --background: 220 15% 8%;
+    --foreground: 210 40% 98%;
+    --card: 220 15% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 220 15% 12%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 10% 65%;
+    --accent: 220 15% 20%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 217 91% 60%;
   }
 }
 

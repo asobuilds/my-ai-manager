@@ -176,7 +176,7 @@ export default function HomeManagementPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 pb-16">
+    <div className="max-w-6xl mx-auto space-y-12 pb-16 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

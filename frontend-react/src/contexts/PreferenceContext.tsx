@@ -60,6 +60,10 @@ export function PreferenceProvider({ children }: { children: React.ReactNode }) 
     "inventory",
     "settings",
     "profile",
+    "health",
+    "home",
+    "integrations",
+    "vault",
   ]);
   const [loading, setLoading] = useState(true);
 

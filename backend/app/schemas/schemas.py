@@ -237,6 +237,9 @@ class ProductCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     category: str | None = None
     price: int = Field(ge=0)  # in cents
+    unit_type: str = Field(default="piece", max_length=50)
+    units_per_carton: int = Field(ge=1, default=1)
+    discount_percentage: float = Field(ge=0.0, le=100.0, default=0.0)
     stock_quantity: int = Field(ge=0, default=0)
     reorder_level: int = Field(ge=0, default=5)
 
@@ -245,6 +248,9 @@ class ProductUpdate(BaseModel):
     name: str | None = None
     category: str | None = None
     price: int | None = Field(default=None, ge=0)
+    unit_type: str | None = Field(default=None, max_length=50)
+    units_per_carton: int | None = Field(default=None, ge=1)
+    discount_percentage: float | None = Field(default=None, ge=0.0, le=100.0)
     stock_quantity: int | None = Field(default=None, ge=0)
     reorder_level: int | None = Field(default=None, ge=0)
 
@@ -256,7 +262,10 @@ class ProductResponse(BaseModel):
     name: str
     category: str | None
     price: int  # cents
-    stock_quantity: int
+    unit_type: str
+    units_per_carton: int
+    discount_percentage: float
+    stock_quantity: int  # total base units
     reorder_level: int
     created_at: datetime
     updated_at: datetime | None
@@ -268,6 +277,7 @@ class ProductResponse(BaseModel):
 class StockMovementCreate(BaseModel):
     movement_type: str = Field(pattern="^(in|out)$")
     quantity: int = Field(ge=1)
+    original_unit: str | None = Field(default=None, max_length=20)  # "piece" or "carton"
     reason: str | None = None
 
 
@@ -276,6 +286,8 @@ class StockMovementResponse(BaseModel):
     product_id: UUID
     movement_type: str
     quantity: int
+    original_unit: str | None
+    quantity_in_base_units: int
     reason: str | None
     created_at: datetime
 
@@ -479,3 +491,20 @@ class DailyReportOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------- Secure Vault ----------
+
+class VaultFileOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    filename: str
+    encrypted_path: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class VaultDownloadRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)

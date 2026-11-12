@@ -14,6 +14,7 @@ import {
   User,
   Heart,
   Home,
+  Lock,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Social Media", href: "/dashboard/social", icon: Megaphone },
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase },
   { label: "Health", href: "/dashboard/health", icon: Heart, iconClass: "text-red-400" },
+  { label: "Vault", href: "/dashboard/vault", icon: Lock, iconClass: "text-yellow-400" },
   { label: "Integrations", href: "/dashboard/integrations", icon: Plug },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Profile", href: "/dashboard/profile", icon: User },

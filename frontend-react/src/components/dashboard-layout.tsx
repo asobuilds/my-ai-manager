@@ -29,6 +29,7 @@ import {
   MessageSquare,
   Heart,
   Home,
+  Lock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
@@ -44,6 +45,7 @@ const navItems = [
   { label: "Job Tracker", href: "/dashboard/jobs", icon: Briefcase, feature: "jobs", iconColor: "text-amber-400" },
   { label: "Health", href: "/dashboard/health", icon: Heart, feature: "health", iconColor: "text-red-400" },
   { label: "Home", href: "/dashboard/home", icon: Home, feature: "home", iconColor: "text-orange-400" },
+  { label: "Vault", href: "/dashboard/vault", icon: Lock, feature: "vault", iconColor: "text-yellow-400" },
   { label: "Integrations", href: "/dashboard/integrations", icon: Plug, feature: "integrations", iconColor: "text-indigo-400" },
   { label: "Settings", href: "/dashboard/settings", icon: Settings, feature: "settings", iconColor: "text-green-400" },
   { label: "Profile", href: "/dashboard/profile", icon: User, feature: "profile", iconColor: "text-violet-400" },
@@ -129,15 +131,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <SidebarContentInner />
           <SidebarRail />
         </Sidebar>
-        <main className="flex-1 flex flex-col min-w-0 bg-background text-foreground">
-          <header className="h-14 border-b border-border flex items-center px-4 gap-3 shrink-0 bg-muted/20">
+        <main className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-foreground">
+          <header className="h-14 border-b border-white/10 flex items-center px-4 gap-3 shrink-0 bg-slate-900/50 backdrop-blur-sm">
             {showBackButton && <BackButton />}
             <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
             <span className="text-xs text-muted-foreground ml-1">
               Aso Data Assistant
             </span>
           </header>
-          <div className="flex-1 overflow-auto p-6 bg-background text-foreground">{children}</div>
+          <div className="flex-1 overflow-auto p-6">{children}</div>
         </main>
       </div>
     </SidebarProvider>
