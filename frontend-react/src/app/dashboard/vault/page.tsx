@@ -73,7 +73,9 @@ export default function VaultPage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("password", uploadPassword);
-      await api.post("/vault/upload", formData);
+      await api.post("/vault/upload", formData, {
+        headers: { "Content-Type": undefined },
+      });
       showToast("File encrypted and stored in your vault.", "ok");
       setUploadPassword("");
       if (fileInputRef.current) fileInputRef.current.value = "";
