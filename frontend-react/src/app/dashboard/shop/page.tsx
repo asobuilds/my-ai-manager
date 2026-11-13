@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Boxes,
@@ -131,6 +132,8 @@ export default function ShopPage() {
 
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
+  const router = useRouter();
+
   const isStaff = role === "staff";
   const canModify = role !== null && !isStaff;
 
@@ -139,7 +142,17 @@ export default function ShopPage() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  function handleAuthError() {
+    localStorage.removeItem("access_token");
+    router.replace("/login");
+  }
+
   const loadData = useCallback(async () => {
+    // Redirect to login if no token is present
+    if (!localStorage.getItem("access_token")) {
+      router.replace("/login");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -153,12 +166,17 @@ export default function ShopPage() {
       setAlerts(alertsRes.data);
       setRole(meRes.data.role);
       setSuppliers(suppliersRes.data);
-    } catch {
-      setError("Failed to load inventory. Please try again.");
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403) {
+        handleAuthError();
+      } else {
+        setError("Failed to load inventory. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     loadData();
