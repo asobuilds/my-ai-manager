@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Home as HomeIcon, Wrench, Plus, CheckCircle2, Clock, ShieldCheck, Tag, Loader2, X, AlertCircle } from "lucide-react";
+import { Home as HomeIcon, Wrench, Plus, CheckCircle2, Clock, ShieldCheck, Tag, Loader2, X, AlertCircle, Lightbulb } from "lucide-react";
 import api from "@/lib/api";
 
 interface HomeAsset {
@@ -24,6 +24,36 @@ interface MaintenanceTask {
   completed: boolean;
 }
 
+interface HomeDevice {
+  entity_id: string;
+  state: string | null;
+  friendly_name: string | null;
+  last_updated: string | null;
+  reachable: boolean;
+}
+
+interface HomeDevicesResponse {
+  configured: boolean;
+  devices: HomeDevice[];
+}
+
+const DEVICE_LABELS: Record<string, string> = {
+  "light.living_room": "Living Room Light",
+  "switch.generator": "Generator",
+};
+
+function humanizeEntity(entityId: string): string {
+  const [, object = ""] = entityId.split(".");
+  const words = object.split("_").filter(Boolean);
+  if (words.length === 0) return entityId;
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+function deviceLabel(entityId: string, friendlyName: string | null): string {
+  if (friendlyName) return friendlyName;
+  return DEVICE_LABELS[entityId] || humanizeEntity(entityId);
+}
+
 export default function HomeManagementPage() {
   const [assets, setAssets] = useState<HomeAsset[]>([
     { id: "1", name: "Smart HVAC System", category: "Climate Control", serial_number: "HVAC-9081-X", purchase_date: "2024-05-12", warranty_expiry: "2027-05-12" },
@@ -39,6 +69,10 @@ export default function HomeManagementPage() {
 
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
+
+  const [devices, setDevices] = useState<HomeDevice[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(true);
+  const [hassConfigured, setHassConfigured] = useState(false);
 
   // Modals state
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
@@ -74,6 +108,7 @@ export default function HomeManagementPage() {
   const fetchData = useCallback(async () => {
     setLoadingAssets(true);
     setLoadingTasks(true);
+    setLoadingDevices(true);
 
     try {
       const res = await api.get<HomeAsset[]>("/home/assets");
@@ -95,6 +130,18 @@ export default function HomeManagementPage() {
       // Keep mock tasks
     } finally {
       setLoadingTasks(false);
+    }
+
+    try {
+      const res = await api.get<HomeDevicesResponse>("/home/devices");
+      if (res.data && Array.isArray(res.data.devices)) {
+        setDevices(res.data.devices);
+        setHassConfigured(Boolean(res.data.configured));
+      }
+    } catch {
+      // No live device states (HA not configured or offline)
+    } finally {
+      setLoadingDevices(false);
     }
   }, []);
 
@@ -222,6 +269,56 @@ export default function HomeManagementPage() {
           {toast.msg}
         </div>
       )}
+
+      {/* ── Section 0: Connected Home Devices (Home Assistant) ── */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Lightbulb size={18} className="text-yellow-400" /> Connected Devices
+          </h2>
+          <span className="text-xs text-slate-400">
+            {hassConfigured ? "Live via Home Assistant" : "Home Assistant not configured"}
+          </span>
+        </div>
+
+        {loadingDevices ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-24 rounded-2xl bg-white/5 animate-pulse border border-white/10" />
+            ))}
+          </div>
+        ) : devices.length === 0 ? (
+          <div className="p-8 rounded-2xl border border-white/10 text-center text-slate-400 text-sm bg-white/[0.02]">
+            {hassConfigured
+              ? "No devices are reachable from Home Assistant right now."
+              : "Set HASS_URL and HASS_TOKEN in the backend .env to enable live device states."}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {devices.map((device) => {
+              const label = deviceLabel(device.entity_id, device.friendly_name);
+              const online = device.reachable && device.state != null;
+              const isOn = online && device.state!.toLowerCase() === "on";
+              return (
+                <div
+                  key={device.entity_id}
+                  className="p-5 rounded-2xl border bg-white/5 backdrop-blur-md border-white/10"
+                >
+                  <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">{label}</p>
+                  <p
+                    className={`text-2xl font-extrabold mt-2 ${
+                      online ? (isOn ? "text-emerald-400" : "text-slate-300") : "text-red-400"
+                    }`}
+                  >
+                    {online ? (isOn ? "ON" : "OFF") : "Unreachable"}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1 font-mono">{device.entity_id}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* ── Section 1: Home Assets ── */}
       <section className="space-y-6">

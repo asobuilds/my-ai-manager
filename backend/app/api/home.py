@@ -12,11 +12,35 @@ from app.models.models import HomeAsset, MaintenanceTask, User
 from app.schemas.schemas import (
     HomeAssetCreate,
     HomeAssetOut,
+    HomeDeviceStateOut,
+    HomeDevicesOut,
     MaintenanceTaskCreate,
     MaintenanceTaskOut,
 )
+from app.services.home_assistant import TRACKED_ENTITIES, get_entity_state, is_configured
 
 router = APIRouter(prefix="/home", tags=["home"])
+
+
+@router.get("/devices", response_model=HomeDevicesOut)
+def get_home_devices(
+    current_user: User = Depends(get_current_user),
+):
+    """Return the live Home Assistant states for the tracked home devices."""
+    devices: list[HomeDeviceStateOut] = []
+    for entity_id in TRACKED_ENTITIES:
+        payload = get_entity_state(entity_id)
+        attributes = (payload or {}).get("attributes") or {}
+        devices.append(
+            HomeDeviceStateOut(
+                entity_id=entity_id,
+                state=payload.get("state") if payload else None,
+                friendly_name=attributes.get("friendly_name"),
+                last_updated=payload.get("last_updated") if payload else None,
+                reachable=payload is not None,
+            )
+        )
+    return HomeDevicesOut(configured=is_configured(), devices=devices)
 
 
 @router.get("/assets", response_model=list[HomeAssetOut])

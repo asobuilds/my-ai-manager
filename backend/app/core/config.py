@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     AGNES_API_KEY: str = ""
     AGNES_BASE_URL: str = "https://apihub.agnes-ai.com/v1"
 
+    # Home Assistant
+    HASS_URL: str = ""
+    HASS_TOKEN: str = ""
+
 
 @lru_cache()
 def get_settings() -> Settings:

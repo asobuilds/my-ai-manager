@@ -470,6 +470,19 @@ class MaintenanceTaskOut(BaseModel):
         from_attributes = True
 
 
+class HomeDeviceStateOut(BaseModel):
+    entity_id: str
+    state: str | None
+    friendly_name: str | None
+    last_updated: str | None
+    reachable: bool
+
+
+class HomeDevicesOut(BaseModel):
+    configured: bool
+    devices: list[HomeDeviceStateOut]
+
+
 # ---------- Daily Report / Analytics ----------
 
 class SalesSummary(BaseModel):

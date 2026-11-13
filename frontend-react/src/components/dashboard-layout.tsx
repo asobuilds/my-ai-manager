@@ -34,6 +34,7 @@ import {
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { usePreferences } from "@/contexts/PreferenceContext";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const navItems = [
   { label: "Chat", href: "/dashboard/chat", icon: MessageSquare, feature: "chat", iconColor: "text-blue-400" },
@@ -124,13 +125,66 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const showBackButton = pathname !== "/dashboard";
 
+  // Hover-to-expand: expand after a short delay so brief accidental passes
+  // don't trigger layout thrashing, collapse immediately on leave.
+  const [expandedByHover, setExpandedByHover] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleMouseEnter() {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setExpandedByHover(true), 200);
+  }
+
+  function handleMouseLeave() {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = null;
+    setExpandedByHover(false);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
+  // Inject transition styles once when mounted
+  useLayoutEffect(() => {
+    const styleId = "aso-sidebar-hover-transition";
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+      /* Smooth width transition for hover-expanded desktop sidebar */
+      .aso-sidebar-wrapper[data-hover="true"] > [data-slot="sidebar"] {
+        transition: width 200ms ease;
+      }
+      .aso-sidebar-wrapper[data-hover="false"] > [data-slot="sidebar"] {
+        transition: width 200ms ease;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full bg-background text-foreground">
-        <Sidebar collapsible="icon" variant="inset" className="border-r border-white/5 bg-slate-900/80 backdrop-blur-md">
-          <SidebarContentInner />
-          <SidebarRail />
-        </Sidebar>
+        <div
+          className="aso-sidebar-wrapper shrink-0"
+          data-hover={expandedByHover}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <Sidebar
+            collapsible="icon"
+            variant="inset"
+            className={`border-r border-white/5 bg-slate-900/80 backdrop-blur-md ${
+              expandedByHover ? "w-[220px]" : ""
+            }`}
+          >
+            <SidebarContentInner />
+            <SidebarRail />
+          </Sidebar>
+        </div>
         <main className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-foreground">
           <header className="h-14 border-b border-white/10 flex items-center px-4 gap-3 shrink-0 bg-slate-900/50 backdrop-blur-sm">
             {showBackButton && <BackButton />}
