@@ -3,7 +3,6 @@ import axios from "axios";
 const api = axios.create({
   baseURL: "http://127.0.0.1:8000/api/v1",
   headers: { "Content-Type": "application/json" },
-  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
@@ -17,10 +16,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
       localStorage.removeItem("access_token");
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("aso:unauthorized"));
+        // Navigate immediately so the user lands on /login without waiting
+        // for a parent component to observe the DOM event.
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);
