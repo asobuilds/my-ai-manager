@@ -1,4 +1,4 @@
-"""Chat endpoint using the Agnes AI API."""
+"""Chat endpoint using the Agnes AI API with multi-provider fallback."""
 from __future__ import annotations
 
 import json
@@ -28,9 +28,11 @@ from app.models.models import (
     User,
 )
 from app.schemas.schemas import ChatMessageOut, ChatRequest, ExplainRequest
+from app.services.llm_fallback import FallbackLLMClient
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 settings = get_settings()
+llm = FallbackLLMClient()
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -302,24 +304,6 @@ TOOL_HANDLERS: dict[str, Any] = {
 MAX_TOOL_ROUNDS = 3
 
 
-async def _call_agnes(payload: dict[str, Any]) -> dict[str, Any]:
-    base_url = settings.AGNES_BASE_URL.rstrip("/")
-    url = base_url + "/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {settings.AGNES_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, headers=headers, json=payload)
-            resp.raise_for_status()
-            return resp.json()
-    except (httpx.HTTPStatusError, httpx.HTTPError) as exc:
-        raise HTTPException(status_code=502, detail=f"Agnes AI API error: {exc}")
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Agnes AI request failed: {exc}")
-
-
 @router.post("")
 @router.post("/")
 async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
@@ -520,7 +504,7 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
         "tool_choice": "auto",
     }
 
-    data = await _call_agnes(payload)
+    data = llm.chat_completion(messages=messages_history, tools=TOOLS)
     choices = data.get("choices", [])
     if not choices:
         raise HTTPException(status_code=502, detail="No response from Agnes AI")
@@ -564,7 +548,8 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
             "tools": TOOLS,
             "tool_choice": "auto",
         }
-        data = await _call_agnes(followup)
+
+        data = llm.chat_completion(messages=messages_history, tools=TOOLS)
         choices = data.get("choices", [])
         if not choices:
             raise HTTPException(status_code=502, detail="No response from Agnes AI")
@@ -631,29 +616,12 @@ async def explain_draft(
         f"Explain in 2-4 sentences why you wrote this draft — what cues from the original email influenced your word choice, tone, and structure?"
     )
 
-    base_url = settings.AGNES_BASE_URL.rstrip("/")
-    url = base_url + "/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {settings.AGNES_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "agnes-2.5-flash",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    }
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
 
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-    except (httpx.HTTPStatusError, httpx.HTTPError) as exc:
-        raise HTTPException(status_code=502, detail=f"Agnes AI API error: {exc}")
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Agnes AI request failed: {exc}")
+    data = llm.chat_completion(messages=messages)
 
     choices = data.get("choices", [])
     if not choices:

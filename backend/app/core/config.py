@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     AGNES_API_KEY: str = ""
     AGNES_BASE_URL: str = "https://apihub.agnes-ai.com/v1"
 
+    # Multi-provider LLM fallbacks
+    GROQ_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+
     # Home Assistant
     HASS_URL: str = ""
     HASS_TOKEN: str = ""
