@@ -34,7 +34,8 @@ import {
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { usePreferences } from "@/contexts/PreferenceContext";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useRef, useState } from "react";
 
 const navItems = [
   { label: "Chat", href: "/dashboard/chat", icon: MessageSquare, feature: "chat", iconColor: "text-blue-400" },
@@ -147,39 +148,29 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Inject transition styles once when mounted
-  useLayoutEffect(() => {
-    const styleId = "aso-sidebar-hover-transition";
-    if (document.getElementById(styleId)) return;
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      /* Smooth width transition for hover-expanded desktop sidebar */
-      .aso-sidebar-wrapper[data-hover="true"] > [data-slot="sidebar"] {
-        transition: width 200ms ease;
-      }
-      .aso-sidebar-wrapper[data-hover="false"] > [data-slot="sidebar"] {
-        transition: width 200ms ease;
-      }
-    `;
-    document.head.appendChild(style);
-  }, []);
+  // Manual toggle for touch devices (the hamburger button). When set, the
+  // sidebar stays expanded regardless of hover; otherwise hover controls it.
+  const [manuallyExpanded, setManuallyExpanded] = useState(false);
+  const isMobile = useIsMobile();
+
+  // Mobile always uses the shadcn drawer (openMobile). On desktop the sidebar
+  // expands on hover or when manually toggled, and collapses to icon-only
+  // (w-16) otherwise.
+  const open = isMobile ? true : expandedByHover || manuallyExpanded;
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider open={open} onOpenChange={(value) => setManuallyExpanded(value)}>
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <div
           className="aso-sidebar-wrapper shrink-0"
-          data-hover={expandedByHover}
+          style={{ "--sidebar-width": "14rem" } as React.CSSProperties}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           <Sidebar
             collapsible="icon"
             variant="inset"
-            className={`border-r border-white/5 bg-slate-900/80 backdrop-blur-md ${
-              expandedByHover ? "w-[220px]" : ""
-            }`}
+            className="border-r border-white/5 bg-slate-900/80 backdrop-blur-md transition-all duration-200"
           >
             <SidebarContentInner />
             <SidebarRail />
