@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -24,6 +24,7 @@ from app.models.models import (
     MaintenanceTask,
     Message,
     Product,
+    StockMovement,
     User,
 )
 from app.schemas.schemas import ChatMessageOut, ChatRequest, ExplainRequest
@@ -31,7 +32,7 @@ from app.schemas.schemas import ChatMessageOut, ChatRequest, ExplainRequest
 router = APIRouter(prefix="/chat", tags=["chat"])
 settings = get_settings()
 
-CALENDAR_TOOLS: list[dict[str, Any]] = [
+TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
@@ -67,7 +68,51 @@ CALENDAR_TOOLS: list[dict[str, Any]] = [
                 "required": ["title", "start_time", "end_time", "confirm"],
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_low_stock",
+            "description": (
+                "List the user's shop products that are at or below their reorder level. "
+                "Call this when the user asks about low stock, out-of-stock items, or what to restock."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_shop_analytics",
+            "description": (
+                "Return the user's weekly shop sales analytics: total revenue, top-selling products, "
+                "and average daily sales. Call this when the user asks about sales, revenue, or what is selling."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_health_vitals",
+            "description": (
+                "Return the user's latest health vitals (blood pressure, heart rate, steps, weight) "
+                "and their recorded blood type. Call this when the user asks about their health or vitals."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_home_maintenance",
+            "description": (
+                "Return the user's pending (incomplete) home maintenance tasks with due dates. "
+                "Call this when the user asks about home maintenance or upcoming tasks."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
 ]
 
 
@@ -123,6 +168,140 @@ def create_calendar_event_tool(
     }
 
 
+def check_low_stock_tool(db: Session, user: User, args: dict[str, Any]) -> dict[str, Any]:
+    """Return the user's products that are at or below their reorder level."""
+    products = (
+        db.query(Product)
+        .filter(Product.user_id == user.id, Product.stock_quantity <= Product.reorder_level)
+        .order_by(Product.stock_quantity.asc())
+        .all()
+    )
+    items = [
+        {
+            "name": p.name,
+            "sku": p.sku,
+            "current_stock": p.stock_quantity,
+            "reorder_level": p.reorder_level,
+        }
+        for p in products
+    ]
+    return {"status": "ok", "count": len(items), "low_stock": items}
+
+
+def get_shop_analytics_tool(db: Session, user: User, args: dict[str, Any]) -> dict[str, Any]:
+    """Return weekly shop sales analytics (mirrors the /shop/analytics endpoint)."""
+    end_date = date.today()
+    start_date = end_date - timedelta(days=6)
+    start_dt = datetime.combine(start_date, datetime.min.time())
+    end_dt = datetime.combine(end_date, datetime.max.time())
+
+    movements = (
+        db.query(StockMovement)
+        .join(Product)
+        .filter(
+            Product.user_id == user.id,
+            StockMovement.movement_type == "out",
+            StockMovement.created_at >= start_dt,
+            StockMovement.created_at <= end_dt,
+        )
+        .all()
+    )
+
+    total_revenue_cents = 0
+    product_qty: dict[str, int] = {}
+    daily_counts: dict[date, int] = {}
+    for m in movements:
+        price_cents = m.product.price if m.product else 0
+        total_revenue_cents += m.quantity * price_cents
+        product_name = m.product.name if m.product else "Unknown"
+        product_qty[product_name] = product_qty.get(product_name, 0) + m.quantity
+        day = m.created_at.date() if m.created_at else None
+        if day is not None:
+            daily_counts[day] = daily_counts.get(day, 0) + 1
+
+    total_revenue = round(total_revenue_cents / 100, 2)
+    top_products = [
+        {"name": name, "units_sold": qty}
+        for name, qty in sorted(product_qty.items(), key=lambda x: x[1], reverse=True)[:3]
+    ]
+    avg_daily_sales = (
+        round(sum(daily_counts.values()) / len(daily_counts), 2) if daily_counts else 0.0
+    )
+
+    return {
+        "status": "ok",
+        "total_revenue": total_revenue,
+        "top_products": top_products,
+        "avg_daily_sales": avg_daily_sales,
+        "period_start": start_date.isoformat(),
+        "period_end": end_date.isoformat(),
+    }
+
+
+def get_health_vitals_tool(db: Session, user: User, args: dict[str, Any]) -> dict[str, Any]:
+    """Return the user's latest health vitals and blood type."""
+    profile = (
+        db.query(HealthProfile).filter(HealthProfile.user_id == user.id).first()
+    )
+    latest = (
+        db.query(HealthVitals)
+        .filter(HealthVitals.user_id == user.id)
+        .order_by(HealthVitals.recorded_at.desc())
+        .first()
+    )
+    return {
+        "status": "ok",
+        "blood_type": profile.blood_type if profile else None,
+        "genotype": profile.genotype if profile else None,
+        "latest_vitals": (
+            {
+                "systolic": latest.systolic,
+                "diastolic": latest.diastolic,
+                "heart_rate": latest.heart_rate,
+                "weight": latest.weight,
+                "steps": latest.steps,
+                "calories": latest.calories,
+                "recorded_at": latest.recorded_at.isoformat() if latest.recorded_at else None,
+            }
+            if latest
+            else None
+        ),
+    }
+
+
+def get_home_maintenance_tool(db: Session, user: User, args: dict[str, Any]) -> dict[str, Any]:
+    """Return the user's pending (incomplete) home maintenance tasks."""
+    tasks = (
+        db.query(MaintenanceTask)
+        .filter(
+            MaintenanceTask.user_id == user.id,
+            MaintenanceTask.is_completed.is_(False),
+        )
+        .order_by(MaintenanceTask.due_date.asc())
+        .all()
+    )
+    items = [
+        {
+            "title": t.title,
+            "due_date": t.due_date.isoformat() if t.due_date else None,
+            "asset_id": str(t.asset_id) if t.asset_id else None,
+        }
+        for t in tasks
+    ]
+    return {"status": "ok", "count": len(items), "pending_tasks": items}
+
+
+TOOL_HANDLERS: dict[str, Any] = {
+    "create_calendar_event": create_calendar_event_tool,
+    "check_low_stock": check_low_stock_tool,
+    "get_shop_analytics": get_shop_analytics_tool,
+    "get_health_vitals": get_health_vitals_tool,
+    "get_home_maintenance": get_home_maintenance_tool,
+}
+
+MAX_TOOL_ROUNDS = 3
+
+
 async def _call_agnes(payload: dict[str, Any]) -> dict[str, Any]:
     base_url = settings.AGNES_BASE_URL.rstrip("/")
     url = base_url + "/chat/completions"
@@ -143,7 +322,7 @@ async def _call_agnes(payload: dict[str, Any]) -> dict[str, Any]:
 
 @router.post("")
 @router.post("/")
-async def chat(body: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
     """Forward the user's message to Agnes AI with inbox context and user context."""
     unread_messages = (
         db.query(Message)
@@ -268,6 +447,11 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
             "missing or the request is ambiguous, ask a clarifying question instead of "
             "calling the tool. After creating an event, confirm it back to the user."
         ),
+        (
+            "You have live-data tools: check_low_stock, get_shop_analytics, get_health_vitals, "
+            "and get_home_maintenance. Use these tools whenever the user asks about stock, "
+            "sales, health, or maintenance. Do not guess—call the tool."
+        ),
     ]
     if user_context["full_name"]:
         system_prompt_parts.append(f"Known user name: {user_context['full_name']}.")
@@ -332,7 +516,7 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
     payload = {
         "model": "agnes-2.5-flash",
         "messages": messages_history,
-        "tools": CALENDAR_TOOLS,
+        "tools": TOOLS,
         "tool_choice": "auto",
     }
 
@@ -342,9 +526,11 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
         raise HTTPException(status_code=502, detail="No response from Agnes AI")
     message = choices[0].get("message", {})
     response_text = message.get("content") or ""
-
     tool_calls = message.get("tool_calls") or []
-    if tool_calls:
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        if not tool_calls:
+            break
         messages_history.append(
             {
                 "role": "assistant",
@@ -359,8 +545,9 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
                 args = json.loads(function.get("arguments") or "{}")
             except (TypeError, ValueError):
                 args = {}
-            if name == "create_calendar_event":
-                result = create_calendar_event_tool(db, current_user, args)
+            handler = TOOL_HANDLERS.get(name)
+            if handler is not None:
+                result = handler(db, current_user, args)
             else:
                 result = {"status": "error", "message": f"Unknown tool: {name}"}
             messages_history.append(
@@ -374,14 +561,16 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_user)
         followup = {
             "model": "agnes-2.5-flash",
             "messages": messages_history,
-            "tools": CALENDAR_TOOLS,
+            "tools": TOOLS,
             "tool_choice": "auto",
         }
         data = await _call_agnes(followup)
         choices = data.get("choices", [])
         if not choices:
             raise HTTPException(status_code=502, detail="No response from Agnes AI")
-        response_text = choices[0].get("message", {}).get("content") or ""
+        message = choices[0].get("message", {})
+        response_text = message.get("content") or ""
+        tool_calls = message.get("tool_calls") or []
 
     assistant_msg = ChatMessage(conversation_id=conversation_id, role="assistant", content=response_text)
     db.add(assistant_msg)
