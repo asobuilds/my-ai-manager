@@ -14,9 +14,9 @@ import {
   Package,
   PenLine,
   MessageSquare,
-  CloudSun,
 } from "lucide-react";
 import api from "@/lib/api";
+import { WeatherWidget } from "@/components/weather-widget";
 
 interface Message {
   id: string;
@@ -108,10 +108,7 @@ export default function DashboardPage() {
               <Clock size={12} />
               <span>Last sync: active</span>
             </div>
-            <div className="glass-card flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--muted-foreground)]">
-              <CloudSun size={12} className="text-yellow-400" />
-              <span>28°C Lagos</span>
-            </div>
+            <WeatherWidget />
           </div>
         </div>
 
