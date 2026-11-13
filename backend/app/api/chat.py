@@ -518,15 +518,15 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
         messages_history.append(
             {
                 "role": "assistant",
-                "content": message.get("content") or "",
+                "content": response_text,
                 "tool_calls": tool_calls,
             }
         )
         for call in tool_calls:
-            function = call.get("function", {}) or {}
-            name = function.get("name")
+            function = call.function or {}
+            name = call.function.name
             try:
-                args = json.loads(function.get("arguments") or "{}")
+                args = json.loads(call.function.arguments or "{}")
             except (TypeError, ValueError):
                 args = {}
             handler = TOOL_HANDLERS.get(name)
@@ -537,7 +537,7 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
             messages_history.append(
                 {
                     "role": "tool",
-                    "tool_call_id": call.get("id"),
+                    "tool_call_id": call.id,
                     "content": json.dumps(result, default=str),
                 }
             )
