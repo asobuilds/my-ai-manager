@@ -220,6 +220,17 @@ class ExplainRequest(BaseModel):
     draft_text: str
 
 
+class ChatMessageOut(BaseModel):
+    id: UUID
+    conversation_id: str
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ---------- Profile ----------
 
 class ProfileUpdate(BaseModel):

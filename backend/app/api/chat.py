@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.security import get_current_owner
+from app.core.security import get_current_owner, get_current_user
 from app.models.models import (
     CalendarEvent,
     ChatMessage,
@@ -26,7 +26,7 @@ from app.models.models import (
     Product,
     User,
 )
-from app.schemas.schemas import ChatRequest, ExplainRequest
+from app.schemas.schemas import ChatMessageOut, ChatRequest, ExplainRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 settings = get_settings()
@@ -143,7 +143,7 @@ async def _call_agnes(payload: dict[str, Any]) -> dict[str, Any]:
 
 @router.post("")
 @router.post("/")
-async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner), db: Session = Depends(get_db)):
+async def chat(body: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Forward the user's message to Agnes AI with inbox context and user context."""
     unread_messages = (
         db.query(Message)
@@ -390,10 +390,33 @@ async def chat(body: ChatRequest, current_user: User = Depends(get_current_owner
     return {"response": response_text, "conversation_id": conversation_id}
 
 
+@router.get("/history", response_model=list[ChatMessageOut])
+def get_conversation_history(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return all chat messages for a conversation, ordered by creation time."""
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id, Conversation.user_id == current_user.id)
+        .first()
+    )
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return (
+        db.query(ChatMessage)
+        .filter(ChatMessage.conversation_id == conversation_id)
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    )
+
+
 @router.post("/explain")
 async def explain_draft(
     body: ExplainRequest,
-    current_user: User = Depends(get_current_owner),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Explain why the AI wrote a specific draft reply, citing the original email."""

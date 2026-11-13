@@ -1,7 +1,8 @@
 """Tests for the Agnes AI chat endpoint."""
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
-from app.models.models import Message
+from app.models.models import ChatMessage, Conversation, Message, User
 
 
 class MockResponse:
@@ -105,4 +106,65 @@ class TestChatApi:
 
     def test_chat_unauthenticated(self, client):
         resp = client.post("/api/v1/chat", json={"message": "hi"})
+        assert resp.status_code == 401
+
+
+class TestChatHistory:
+    def test_history_unknown_conversation(self, client, auth_headers):
+        resp = client.get(
+            "/api/v1/chat/history?conversation_id=does-not-exist",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_history_returns_messages_ordered(self, client, auth_headers, db_session):
+        user = db_session.query(User).filter(User.email == "test@example.com").first()
+        db_session.add(Conversation(id="convo-abc", user_id=user.id))
+        db_session.commit()
+        db_session.add(
+            ChatMessage(
+                conversation_id="convo-abc",
+                role="user",
+                content="hi there",
+                created_at=datetime(2026, 11, 1, 9, 0, 0),
+            )
+        )
+        db_session.add(
+            ChatMessage(
+                conversation_id="convo-abc",
+                role="assistant",
+                content="hello!",
+                created_at=datetime(2026, 11, 1, 9, 0, 5),
+            )
+        )
+        db_session.commit()
+
+        resp = client.get(
+            "/api/v1/chat/history?conversation_id=convo-abc",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert [m["role"] for m in data] == ["user", "assistant"]
+        assert [m["content"] for m in data] == ["hi there", "hello!"]
+        assert all(m["conversation_id"] == "convo-abc" for m in data)
+
+    def test_history_scoped_to_owner(self, client, auth_headers, db_session):
+        other = User(email="other-hist@example.com", hashed_password="placeholder", role="owner")
+        db_session.add(other)
+        db_session.commit()
+        db_session.refresh(other)
+        db_session.add(Conversation(id="convo-other", user_id=other.id))
+        db_session.add(ChatMessage(conversation_id="convo-other", role="user", content="secret"))
+        db_session.commit()
+
+        # test@example.com (auth_headers) cannot read another user's conversation.
+        resp = client.get(
+            "/api/v1/chat/history?conversation_id=convo-other",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_history_unauthenticated(self, client):
+        resp = client.get("/api/v1/chat/history?conversation_id=convo-abc")
         assert resp.status_code == 401

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, FormEvent } from "react";
-import { Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Plus } from "lucide-react";
 import api from "@/lib/api";
 
 interface Message {
@@ -9,11 +9,55 @@ interface Message {
   content: string;
 }
 
+interface HistoryMessage {
+  role: string;
+  content: string;
+}
+
+const CHAT_STORAGE_KEY = "aso_chat_conversation_id";
+
+function readStoredConversationId(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(CHAT_STORAGE_KEY);
+}
+
+function storeConversationId(id: string | null) {
+  if (typeof window === "undefined") return;
+  if (id) sessionStorage.setItem(CHAT_STORAGE_KEY, id);
+  else sessionStorage.removeItem(CHAT_STORAGE_KEY);
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // On first load, restore the conversation and fetch its history.
+  useEffect(() => {
+    const stored = readStoredConversationId();
+    if (!stored) return;
+    setConversationId(stored);
+    setLoadingHistory(true);
+    api
+      .get<HistoryMessage[]>(`/chat/history?conversation_id=${encodeURIComponent(stored)}`)
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        setMessages(
+          data
+            .filter((m) => (m.role === "user" || m.role === "assistant") && m.content)
+            .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }))
+        );
+      })
+      .catch(() => {
+        // Conversation no longer exists or fetch failed → start fresh.
+        storeConversationId(null);
+        setConversationId(null);
+      })
+      .finally(() => setLoadingHistory(false));
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -21,18 +65,24 @@ export default function ChatPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    const text = input.trim();
+    if (!text || loading) return;
 
-    const userMsg: Message = { role: "user", content: input.trim() };
+    const userMsg: Message = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
       const response = await api.post("/chat", {
-        message: input.trim(),
-        conversation_id: null,
+        message: text,
+        conversation_id: conversationId,
       });
+      const newId: string | null = response.data.conversation_id || null;
+      if (newId) {
+        setConversationId(newId);
+        storeConversationId(newId);
+      }
       const assistantMsg: Message = { role: "assistant", content: response.data.response || "" };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error: any) {
@@ -43,39 +93,68 @@ export default function ChatPage() {
     }
   }
 
+  function startNewConversation() {
+    storeConversationId(null);
+    setConversationId(null);
+    setMessages([]);
+    setInput("");
+  }
+
   return (
     <div className="h-full flex flex-col">
+      {/* Conversation Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+        <div className="text-xs font-medium text-[var(--muted-foreground)] flex items-center gap-2">
+          <Bot size={14} className="text-blue-400" />
+          {messages.length > 0 ? "Conversation" : "New chat"}
+        </div>
+        <button
+          onClick={startNewConversation}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+          style={{ borderColor: "rgba(255,255,255,0.08)" }}
+        >
+          <Plus size={12} /> New Conversation
+        </button>
+      </div>
+
       {/* Message History */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
         {messages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-              <Bot size={28} className="text-blue-400" />
+          loadingHistory ? (
+            <div className="flex flex-col items-center justify-center py-12 text-[var(--muted-foreground)]">
+              <Loader2 size={20} className="animate-spin text-blue-400 mb-3" />
+              <p className="text-sm">Loading your conversation…</p>
             </div>
-            <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-              Hello, I'm Aso!
-            </h2>
-            <p className="text-sm text-[var(--muted-foreground)] max-w-md mx-auto">
-              I'm your personal AI assistant. Ask me about your emails, calendar, inventory, or anything else!
-            </p>
-            <div className="mt-6 flex gap-2 justify-center flex-wrap">
-              {[
-                "Check my low stock items",
-                "Schedule a meeting tomorrow",
-                "What emails need attention?",
-                "Show me my calendar",
-              ].map((hint) => (
-                <button
-                  key={hint}
-                  onClick={() => setInput(hint)}
-                  className="px-3 py-1.5 text-xs rounded-lg border text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
-                >
-                  {hint}
-                </button>
-              ))}
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                <Bot size={28} className="text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">
+                Hello, I&apos;m Aso!
+              </h2>
+              <p className="text-sm text-[var(--muted-foreground)] max-w-md mx-auto">
+                I&apos;m your personal AI assistant. Ask me about your emails, calendar, inventory, or anything else!
+              </p>
+              <div className="mt-6 flex gap-2 justify-center flex-wrap">
+                {[
+                  "Check my low stock items",
+                  "Schedule a meeting tomorrow",
+                  "What emails need attention?",
+                  "Show me my calendar",
+                ].map((hint) => (
+                  <button
+                    key={hint}
+                    onClick={() => setInput(hint)}
+                    className="px-3 py-1.5 text-xs rounded-lg border text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                    style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                  >
+                    {hint}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )
         ) : (
           <div className="space-y-4">
             {messages.map((msg, idx) => (
